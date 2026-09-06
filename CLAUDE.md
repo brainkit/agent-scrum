@@ -102,15 +102,13 @@ for the route itself:
   ground (b), not an automatic PLAN trigger — a request that still
   fits context stays FAST even if it spans sessions.
 
-(Measured 2026-09-04, paired blind runs: PLAN lean is 1.6-1.9x slower
-than solo at every measured scale — 60 tickets: 1118s PLAN lean vs 444s
-solo; 120 tickets: 1191s PLAN lean vs 761s solo; 240 tickets: 2189s PLAN
-lean vs 1181s solo (1.85x). Marginal 120→240: PLAN lean +8.3s/ticket vs
-solo +3.5s/ticket — solo's per-ticket cost grows slower too, so no speed
-crossover exists in the measured range up to 240 tickets. Route to PLAN
-for guarantees, parallel actors, or multi-session work — never for
-wall-clock speed; that's why the gate is context-fit, not a speed
-estimate.)
+(Measured, median of simultaneous pairs 2026-09-06: PLAN lean 369s vs
+305s for prompt-only delegation on 60 tickets (~+20%), and wall parity
+when the backlog is a file on disk; at 240 tickets lean's per-ticket
+cost still grows faster than a single agent's, so no speed crossover
+exists in the measured range. Route to PLAN for guarantees, parallel
+actors, or multi-session work — never for wall-clock speed; that's why
+the gate is context-fit, not a speed estimate. Numbers: BENCHMARKS.md.)
 
 **PLAN sub-routing.** PLAN defaults to **PLAN (lean)** — a
 self-organized parallel mode where the main session itself decomposes
@@ -120,13 +118,12 @@ product-owner → team-lead → pipelined wave → scrum-master conveyor —
 only when the user explicitly asks for the full process, an
 independent review, or a role-by-role audit. Print the chosen sub-route
 as one line: `PLAN (lean): K groups` or `PLAN (full process): <why>`.
-PLAN lean is 1.6-1.9x slower than solo at every measured scale (60t:
-1118s vs 444s; 120t: 1191s vs 761s; 240t: 2189s vs 1181s) — no speed
-crossover exists in the measured range. Prefer SOLO for speed at any
-backlog size; route to PLAN for guarantees, parallel actors, or
-multi-session work, not wall-clock speed. Context ceiling is NOT a
-factor at these scales on 1M-window models (solo peaked at 187k = ~19%
-of the window on 120 tickets).
+PLAN lean buys no wall-clock speed over working solo (medians and the
+no-crossover measurement up to 240 tickets: BENCHMARKS.md). Prefer SOLO
+for speed at any backlog size; route to PLAN for guarantees, parallel
+actors, or multi-session work. Context ceiling is NOT a factor at these
+scales on 1M-window models (solo peaked at ~19% of the window on 120
+tickets).
 
 **FAST sub-routing.** Measured 2026-09-03/04: subagent-spawned FAST ran
 66–265s against 31–179s for the main session doing the work itself, and
