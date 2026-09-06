@@ -1,0 +1,6 @@
+# Generated at runtime — never commit
+.claude/
+scrum_crm/crm.db*
+scrum_crm/logs/
+scrum_crm/snapshots/
+__pycache__/

@@ -1,0 +1,40 @@
+{
+  "name": "agent-scrum",
+  "version": "0.1.0",
+  "description": "Agent Scrum \u2014 transactional coordination for Claude Code subagents: a Scrum team with database-enforced guarantees.",
+  "license": "MIT",
+  "bin": {
+    "agent-scrum": "bin/init.js"
+  },
+  "engines": {
+    "node": ">=22.5"
+  },
+  "keywords": [
+    "claude-code",
+    "multi-agent",
+    "orchestration",
+    "scrum",
+    "sqlite",
+    "subagents"
+  ],
+  "files": [
+    "bin/",
+    "scrum_crm/",
+    "claude/",
+    "CLAUDE.md",
+    "install.sh",
+    "start.sh",
+    "README.md",
+    "LICENSE",
+    "tests_selfcheck/",
+    "BENCHMARKS.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/brainkit/agent-scrum.git"
+  },
+  "homepage": "https://github.com/brainkit/agent-scrum#readme",
+  "bugs": {
+    "url": "https://github.com/brainkit/agent-scrum/issues"
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node scrum_crm/crm.mjs:*)",
+      "Bash(node ./scrum_crm/crm.mjs:*)"
+    ],
+    "deny": [
+      "Bash(sqlite3:*)",
+      "Read(scrum_crm/crm.db)",
+      "Edit(scrum_crm/crm.db)",
+      "Write(scrum_crm/crm.db)",
+      "Edit(scrum_crm/crm.mjs)",
+      "Write(scrum_crm/crm.mjs)",
+      "Edit(scrum_crm/lib/**)",
+      "Write(scrum_crm/lib/**)",
+      "Edit(scrum_crm/init.sql)",
+      "Write(scrum_crm/init.sql)",
+      "Edit(.claude/**)",
+      "Write(.claude/**)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard_db.js\""
+          }
+        ]
+      }
+    ]
+  }
+}

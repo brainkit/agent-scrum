@@ -1,0 +1,31 @@
+{
+  "testCmdTask": "npx --no-install jest --runTestsByPath \"tests/task_{ID}.test.js\"",
+  "testCmdAll": "npx --no-install jest",
+  "conventionsFile": "",
+  "intakeEnabled": false,
+  "reviewEnabled": false,
+  "testsEnabled": true,
+  "docsEnabled": true,
+  "gitAutocommit": "auto",
+  "leaseMinutes": 30,
+  "contextWindowTokens": 200000,
+  "contextFitThreshold": 0.6,
+  "testCmdExamples": {
+    "jest": {
+      "testCmdTask": "npx --no-install jest --runTestsByPath \"tests/task_{ID}.test.js\"",
+      "testCmdAll": "npx --no-install jest"
+    },
+    "vitest": {
+      "testCmdTask": "npx --no-install vitest run \"tests/task_{ID}.test.js\"",
+      "testCmdAll": "npx --no-install vitest run"
+    },
+    "pytest": {
+      "testCmdTask": "python3 -m pytest \"tests/test_task_{ID}.py\"",
+      "testCmdAll": "python3 -m pytest tests/"
+    },
+    "plainNode": {
+      "testCmdTask": "node \"tests/task_{ID}.test.js\"",
+      "testCmdAll": "for f in tests/*.test.js; do node \"$f\" || exit 1; done"
+    }
+  }
+}
