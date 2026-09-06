@@ -1,6 +1,6 @@
 {
   "name": "agent-scrum",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "description": "Agent Scrum \u2014 transactional coordination for Claude Code subagents: a Scrum team with database-enforced guarantees.",
   "license": "MIT",
   "bin": {

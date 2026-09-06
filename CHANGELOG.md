@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.10] - 2026-09-07
+
+- "DoD" is spelled out as "Definition of Done" everywhere a person
+  reads it: refusal messages, the events written to the trace, the
+  ledger labels, the contract, the role prompts and the docs. The
+  ledger still counts events written under the old wording.
+- README carries npm/license/node badges linking to the package, so
+  the GitHub page points at the published release (GitHub's own
+  Packages sidebar only lists GitHub Packages, never npmjs).
+
 ## [0.1.9] - 2026-09-06
 
 - Documentation is written with the code, not in a later stage: the

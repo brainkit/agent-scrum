@@ -1,5 +1,11 @@
 # Agent Scrum
 
+[![npm](https://img.shields.io/npm/v/agent-scrum?color=cb3837&logo=npm)](https://www.npmjs.com/package/agent-scrum)
+[![license](https://img.shields.io/npm/l/agent-scrum)](LICENSE)
+[![node](https://img.shields.io/node/v/agent-scrum)](https://nodejs.org)
+
+Install: [`npx agent-scrum <project>`](https://www.npmjs.com/package/agent-scrum)
+
 Transactional coordination for Claude Code subagents: a Scrum team whose
 rules live in a SQLite database — triggers, atomic claims, file locks,
 leases — not in prompts.
