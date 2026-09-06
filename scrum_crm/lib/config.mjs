@@ -7,6 +7,9 @@ const DEFAULT_CONFIG = {
   testCmdTask: 'npx --no-install jest --runTestsByPath "tests/task_{ID}.test.js"',
   testCmdAll: 'npx --no-install jest',
   conventionsFile: '',
+  // PLAN routing: 'auto' (gate decides) | 'ask' (confirm first) | 'off'
+  // (never PLAN — batch-open refuses, so it cannot start by accident)
+  planMode: 'auto',
   intakeEnabled: false,
   reviewEnabled: false,
   testsEnabled: true,

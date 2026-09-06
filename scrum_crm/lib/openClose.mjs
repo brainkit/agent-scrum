@@ -164,7 +164,15 @@ function resolveDescriptions(tickets, projectRoot) {
   });
 }
 
-export function batchOpen({ specPath, dbPath, projectRoot }) {
+export function batchOpen({ specPath, dbPath, projectRoot, config }) {
+  // Mechanical backstop for planMode 'off': batch-open is PLAN's only door
+  // into the backlog, so refusing here means PLAN cannot start at all —
+  // the setting is enforced, not merely requested in a prompt.
+  if (config && config.planMode === 'off') {
+    throw new Error(
+      'planMode is "off" in scrum_crm/config.json — PLAN is disabled, batch-open refused. Do the work in SOLO, or set planMode to "auto"/"ask".',
+    );
+  }
   const tickets = loadTickets(specPath);
   resolveDescriptions(tickets, projectRoot ?? process.cwd());
   validateTickets(tickets);

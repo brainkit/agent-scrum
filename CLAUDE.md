@@ -55,12 +55,27 @@ Print its stdout line verbatim next to the route decision.
     work (~25+ small tickets or 3+ substantial modules per group).
     More than 3 groups / not cleanly disjoint → re-run `context-fit`
     on the full set; it likely exceeds and belongs in PLAN.
-- **exceeds (exit 3) → PLAN (lean).** The default parallel mode.
+- **exceeds (exit 3) → PLAN (lean)**, subject to `planMode` in
+  `scrum_crm/config.json`:
+  - `"auto"` (default) — route to PLAN and say so.
+  - `"ask"` — print the gate line, the intended route and the group
+    count, then STOP and wait for the user's go-ahead. In a
+    non-interactive session (nobody can answer) treat it as `auto` and
+    say that you did.
+  - `"off"` — PLAN is disabled: stay in SOLO and state plainly that the
+    work exceeds the context window, so quality may suffer.
+    `batch-open` refuses to run in this mode, so PLAN cannot start by
+    accident.
 - **PLAN (full process)** — ONLY when the gate says exceeds AND the
   user explicitly asked for the full role process / an independent
   review / a role-by-role audit. A user request alone, with a fitting
   context, does not open it — turn on `reviewEnabled` inside the
   chosen route instead.
+
+**The user's own words outrank the gate and `planMode`.** An explicit
+"use PLAN" / "do it in one session" / "no subagents" in the request is
+obeyed as given — print the gate line anyway, then say which
+instruction you are following and why it differs from the gate.
 
 Under-specification → heavier Stage 0. Regression risk → `run-tests
 all` before closing. Multi-session shape → ask about restart-surviving

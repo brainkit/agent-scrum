@@ -1858,6 +1858,57 @@ scenario_25_installer_host_claude_md() {
   report_pass "$scenario_name"
 }
 
+
+# --- Scenario 26: planMode 'off' is enforced, not merely requested ---
+scenario_26_plan_mode_off_blocks_batch_open() {
+  local scenario_name="26: planMode 'off' makes batch-open refuse (PLAN cannot start by accident); 'auto'/'ask' let it through"
+  reset_database
+
+  local crm=(node "$SCRATCH_DIR/scrum_crm/crm.mjs")
+  cat > "$SCRATCH_DIR/SPEC.json" <<'SPEC'
+[
+  {"title": "P", "description": "Given a When b Then c", "files": ["p.js"]}
+]
+SPEC
+
+  set_config_value() {
+    python3 - "$SCRATCH_DIR/scrum_crm/config.json" "$1" <<'PYCFG'
+import json,sys
+p=sys.argv[1]; c=json.load(open(p)); c['planMode']=sys.argv[2]
+open(p,'w').write(json.dumps(c,indent=2)+'\n')
+PYCFG
+  }
+
+  # a) planMode off -> batch-open refused, nothing inserted.
+  set_config_value off
+  local stderr_file exit_code=0
+  stderr_file="$(mktemp)"
+  (cd "$SCRATCH_DIR" && "${crm[@]}" batch-open SPEC.json) >/dev/null 2>"$stderr_file" || exit_code=$?
+  local stderr_content; stderr_content="$(cat "$stderr_file")"; rm -f "$stderr_file"
+  local inserted; inserted="$("${crm[@]}" db --scalar "SELECT COUNT(*) FROM tasks")"
+  if [[ "$exit_code" -eq 0 || "$stderr_content" != *"planMode"* || "$inserted" != "0" ]]; then
+    report_fail "$scenario_name" "planMode=off must refuse batch-open naming planMode, exit $exit_code, inserted=$inserted, stderr: '$stderr_content'"
+    return
+  fi
+
+  # b) ask and auto both allow it (the confirmation lives in the contract,
+  # not in the mechanics).
+  local mode
+  for mode in ask auto; do
+    reset_database
+    set_config_value "$mode"
+    exit_code=0
+    (cd "$SCRATCH_DIR" && "${crm[@]}" batch-open SPEC.json) >/dev/null 2>&1 || exit_code=$?
+    inserted="$("${crm[@]}" db --scalar "SELECT COUNT(*) FROM tasks")"
+    if [[ "$exit_code" -ne 0 || "$inserted" != "1" ]]; then
+      report_fail "$scenario_name" "planMode=$mode must allow batch-open, exit $exit_code, inserted=$inserted"
+      return
+    fi
+  done
+
+  report_pass "$scenario_name"
+}
+
 main() {
   trap cleanup_scratch EXIT
   prepare_scratch_copy
@@ -1887,6 +1938,7 @@ main() {
   scenario_23_all_roles_participate
   scenario_24_status_transition_log
   scenario_25_installer_host_claude_md
+  scenario_26_plan_mode_off_blocks_batch_open
 
   echo "----"
   echo "Total: PASS=$PASS_COUNT FAIL=$FAIL_COUNT"

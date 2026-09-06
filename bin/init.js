@@ -384,12 +384,20 @@ if (migrateResult.status !== 0) {
 
 // Setup questionnaire: pipeline stages are optional and configurable.
 // Interactive terminal only; --yes (or no TTY) keeps the defaults.
+// Asked in order; a question with askIf is only put to the user when its
+// predicate holds — conventions are what the reviewer checks against, so
+// the question follows the review answer and is skipped without it.
 const STAGE_QUESTIONS = [
   { key: "intakeEnabled", defaultValue: false, prompt: "Enable Stage 0 requirements intake (clarifying questions about the spec before any work)? [y/N] " },
   { key: "reviewEnabled", defaultValue: false, prompt: "Enable the code-review stage (a reviewer agent checks each task before tests)? [y/N] " },
+  {
+    key: "conventionsEnabled",
+    defaultValue: false,
+    askIf: (answers) => answers.reviewEnabled,
+    prompt: "  └ check code against the project's conventions file (auto-detected; fallback scrum_crm/code_conventions.md)? [y/N] ",
+  },
   { key: "testsEnabled", defaultValue: true, prompt: "Enable per-task tests and the DoD gate (a task cannot close on red/missing tests)? [Y/n] " },
   { key: "docsEnabled", defaultValue: true, prompt: "Enable the docs stage (per-task docs before DONE)? [Y/n] " },
-  { key: "conventionsEnabled", defaultValue: false, prompt: "Enable code-conventions checks (auto-detect the project's conventions file; fallback scrum_crm/code_conventions.md)? [y/N] " },
 ];
 
 function parseYesNo(answer, defaultValue) {
@@ -422,8 +430,17 @@ function writeStageConfig(answers, runnerName) {
   fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`);
   const runnerLabel = runnerName === null ? "skipped (edit scrum_crm/config.json)" : runnerName;
   console.log(
-    `init.js: configured — intake ${answers.intakeEnabled ? "on" : "off"}, review ${answers.reviewEnabled ? "on" : "off"}, tests ${answers.testsEnabled ? "on" : "off"}, docs ${answers.docsEnabled ? "on" : "off"}, conventions ${answers.conventionsEnabled ? "on" : "off"}, runner ${runnerLabel}`
+    `init.js: configured — intake ${answers.intakeEnabled ? "on" : "off"}, review ${answers.reviewEnabled ? "on" : "off"}, conventions ${answers.conventionsEnabled ? "on" : "off"}, tests ${answers.testsEnabled ? "on" : "off"}, docs ${answers.docsEnabled ? "on" : "off"}, plan ${answers.planMode || "auto"}, runner ${runnerLabel}`
   );
+}
+
+// auto = the context-fit gate decides; ask = confirm before PLAN;
+// off = never PLAN (batch-open refuses, so it cannot start by accident).
+function parsePlanMode(answer) {
+  const normalized = answer.trim().toLowerCase();
+  if (normalized === "2" || normalized === "ask") return "ask";
+  if (normalized === "3" || normalized === "off") return "off";
+  return "auto";
 }
 
 // Returns a runner name, or null = the user declined the choice (config
@@ -459,6 +476,10 @@ async function runQuestionnaire() {
   let runnerName = "jest";
   try {
     for (const question of STAGE_QUESTIONS) {
+      if (question.askIf && !question.askIf(answers)) {
+        answers[question.key] = question.defaultValue;
+        continue;
+      }
       const reply = await rl.question(`init.js: ${question.prompt}`);
       answers[question.key] = parseYesNo(reply, question.defaultValue);
     }
@@ -466,6 +487,10 @@ async function runQuestionnaire() {
       const reply = await rl.question("init.js: Test runner? 1=jest (default), 2=vitest, 3=pytest, 4=plain node, 0=skip (configure later): ");
       runnerName = parseRunner(reply);
     }
+    const planReply = await rl.question(
+      "init.js: When the work does not fit the context window — 1=PLAN automatically (default), 2=ask me first, 3=never PLAN: "
+    );
+    answers.planMode = parsePlanMode(planReply);
   } catch {
     console.log("init.js: questionnaire interrupted — keeping defaults for the unanswered questions");
   } finally {

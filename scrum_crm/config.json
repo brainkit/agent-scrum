@@ -2,6 +2,7 @@
   "testCmdTask": "npx --no-install jest --runTestsByPath \"tests/task_{ID}.test.js\"",
   "testCmdAll": "npx --no-install jest",
   "conventionsFile": "",
+  "planMode": "auto",
   "intakeEnabled": false,
   "reviewEnabled": false,
   "testsEnabled": true,

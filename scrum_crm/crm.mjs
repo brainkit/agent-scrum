@@ -181,7 +181,7 @@ function runBatchOpenCommand(args) {
     fail('usage: crm.mjs batch-open SPEC.json');
   }
   try {
-    const indexToId = batchOpen({ specPath, dbPath: DB_PATH, projectRoot: PROJECT_ROOT });
+    const indexToId = batchOpen({ specPath, dbPath: DB_PATH, projectRoot: PROJECT_ROOT, config: loadConfig(CRM_DIR) });
     indexToId.forEach((taskId, index) => process.stdout.write(`${index}\t${taskId}\n`));
   } catch (error) {
     process.stderr.write(JSON.stringify({ error: error.message }) + '\n');

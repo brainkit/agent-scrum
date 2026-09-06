@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.5] - 2026-09-06
+
+- PLAN is now yours to control: `planMode` in `scrum_crm/config.json`
+  is `auto` (the context-fit gate decides, unchanged default), `ask`
+  (the session prints the gate line and waits for a go-ahead;
+  degrades to `auto` where nobody can answer) or `off` (never PLAN).
+  `off` is enforced mechanically — `batch-open` refuses, so PLAN
+  cannot start by accident (mechanics scenario 26). An explicit
+  instruction in the request outranks the gate and the setting.
+- Questionnaire: the conventions question now follows the code-review
+  question and is asked only when review is enabled (conventions are
+  what the reviewer checks against); the plan-mode choice was added.
+
 ## [0.1.4] - 2026-09-06
 
 - `CLAUDE.scrum.md` is now written next to the file that imports it, so

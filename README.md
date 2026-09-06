@@ -43,8 +43,9 @@ cd /path/to/project && claude "your request"
 node scrum_crm/crm.mjs board
 ```
 
-The installer asks a short questionnaire (intake / review / tests /
-docs / conventions stages, test runner); `--yes` keeps the defaults.
+The installer asks a short questionnaire (intake / review — and, if
+review is on, the conventions check / tests / docs stages, test runner,
+and how PLAN should be chosen); `--yes` keeps the defaults.
 Everything lands in `scrum_crm/config.json`, editable any time.
 Your own instructions are never overwritten, wherever Claude Code reads
 them from — `CLAUDE.md` at the project root or `.claude/CLAUDE.md`: the
@@ -77,6 +78,7 @@ yourself.
 | A dependency cycle is rejected before it exists | recursive-CTE check in `add-dep` | scenario 4 |
 | Group claims/advances are all-or-nothing | one transaction in `batch-claim`/`batch-advance` | scenario 20 |
 | Every task in the DB is self-contained (full requirement, not a summary) | `batch-open` `description_from` mechanical extraction | scenario 21 |
+| PLAN can be switched off for good, not just discouraged | `planMode: "off"` makes `batch-open` refuse — PLAN's only door into a backlog | scenario 26 |
 | The full process provably involves every role | each stage is enterable only via its role's `claim` channel; the `events` trace names all seven roles per task | scenario 23 |
 | A task's full journey is reconstructible without trusting anyone | `log_status_transition` trigger records every status change into `events` mechanically — raw writes included | scenario 24 |
 
@@ -110,7 +112,12 @@ Transitions are validated by a DB trigger — an invalid one fails with
 ## How it works
 
 Routing is a mechanical gate (`context-fit`: does the read/write set
-fit the context window?), never a judgment call. What each mode is for:
+fit the context window?), never a judgment call — and you stay in
+charge of it: `planMode` in `scrum_crm/config.json` is `auto` (the gate
+decides), `ask` (the session asks before going PLAN) or `off` (never
+PLAN — `batch-open` refuses, so it cannot start by accident), and an
+explicit instruction in your request outranks all of it. What each mode
+is for:
 
 - **FAST / SOLO** — the task fits one session's head: do it now, no
   roles, full DB audit kept. The default for most requests.
@@ -139,7 +146,7 @@ node scrum_crm/crm.mjs board --json      # board payload for scripts
 ## Self-checks
 
 ```bash
-./tests_selfcheck/mechanics_test.sh   # 25 scenarios, exit 0 = all pass
+./tests_selfcheck/mechanics_test.sh   # 26 scenarios, exit 0 = all pass
 ./tests_selfcheck/smoke_test.sh       # P1-P9 end-to-end, no LLM involved
 ```
 
