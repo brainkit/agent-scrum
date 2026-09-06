@@ -1791,12 +1791,16 @@ scenario_25_installer_host_claude_md() {
     report_fail "$scenario_name" "a .claude/CLAUDE.md host must not get a second contract at the project root"
     return
   fi
-  if [[ ! -f "$install_root/dotclaude/CLAUDE.scrum.md" ]]; then
-    report_fail "$scenario_name" "CLAUDE.scrum.md missing for the .claude/CLAUDE.md host"
+  if [[ ! -f "$install_root/dotclaude/.claude/CLAUDE.scrum.md" ]]; then
+    report_fail "$scenario_name" "the contract must sit beside its host: .claude/CLAUDE.scrum.md missing"
     return
   fi
-  if ! grep -q '^@\.\./CLAUDE\.scrum\.md$' "$install_root/dotclaude/.claude/CLAUDE.md"; then
-    report_fail "$scenario_name" "expected '@../CLAUDE.scrum.md' in .claude/CLAUDE.md, got: '$(tail -1 "$install_root/dotclaude/.claude/CLAUDE.md")'"
+  if [[ -f "$install_root/dotclaude/CLAUDE.scrum.md" ]]; then
+    report_fail "$scenario_name" "no stray CLAUDE.scrum.md may be left at the project root"
+    return
+  fi
+  if ! grep -q '^@CLAUDE\.scrum\.md$' "$install_root/dotclaude/.claude/CLAUDE.md"; then
+    report_fail "$scenario_name" "expected a plain '@CLAUDE.scrum.md' import, got: '$(tail -1 "$install_root/dotclaude/.claude/CLAUDE.md")'"
     return
   fi
   if ! grep -q 'rule one' "$install_root/dotclaude/.claude/CLAUDE.md"; then
@@ -1826,7 +1830,24 @@ scenario_25_installer_host_claude_md() {
     return
   fi
 
-  # d) a project with no instructions at all gets the contract as CLAUDE.md.
+  # d) legacy layout (contract at the root, imported with ../) is migrated
+  # in place: the import loses the hop and the stray root copy is removed.
+  mkdir -p "$install_root/legacy/.claude"
+  printf '# Host rules\n\n# agent-scrum (imported contract)\n@../CLAUDE.scrum.md\n' > "$install_root/legacy/.claude/CLAUDE.md"
+  printf 'stale contract\n' > "$install_root/legacy/CLAUDE.scrum.md"
+  node "$init_js" "$install_root/legacy" --yes >/dev/null 2>&1
+  if [[ -f "$install_root/legacy/CLAUDE.scrum.md" ]]; then
+    report_fail "$scenario_name" "the stale root CLAUDE.scrum.md must be removed on upgrade"
+    return
+  fi
+  local legacy_imports
+  legacy_imports="$(grep -c 'CLAUDE.scrum.md' "$install_root/legacy/.claude/CLAUDE.md")"
+  if [[ "$legacy_imports" != "1" ]] || ! grep -q '^@CLAUDE\.scrum\.md$' "$install_root/legacy/.claude/CLAUDE.md"; then
+    report_fail "$scenario_name" "legacy '@../' import must become exactly one '@CLAUDE.scrum.md', found $legacy_imports"
+    return
+  fi
+
+  # e) a project with no instructions at all gets the contract as CLAUDE.md.
   mkdir -p "$install_root/fresh"
   node "$init_js" "$install_root/fresh" --yes >/dev/null 2>&1
   if ! head -1 "$install_root/fresh/CLAUDE.md" | grep -q 'Scrum-CRM'; then

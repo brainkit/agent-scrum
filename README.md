@@ -48,8 +48,9 @@ docs / conventions stages, test runner); `--yes` keeps the defaults.
 Everything lands in `scrum_crm/config.json`, editable any time.
 Your own instructions are never overwritten, wherever Claude Code reads
 them from — `CLAUDE.md` at the project root or `.claude/CLAUDE.md`: the
-contract goes to `CLAUDE.scrum.md` and one `@import` line is appended to
-the host file. Re-running the installer upgrades in place: an existing
+contract goes to a `CLAUDE.scrum.md` written next to that file, and one
+`@CLAUDE.scrum.md` import line is appended to it. Re-running the
+installer upgrades in place: an existing
 `.claude/settings.json` is merged, your config and DB survive (the
 schema is migrated when needed).
 

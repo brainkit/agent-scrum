@@ -257,24 +257,25 @@ ensureGitignoreHasEntries(targetDir, GITIGNORE_ENTRIES);
 // an existing host CLAUDE.md so it's actually loaded, instead of sitting on
 // disk unused.
 const CLAUDE_SCRUM_FILENAME = "CLAUDE.scrum.md";
-
-// Claude Code resolves an @import relative to the importing file, so a host
-// living in .claude/ must reach one directory up.
-function importMarkerFor(hostPath) {
-  const relativePath = path.relative(path.dirname(hostPath), path.join(targetDir, CLAUDE_SCRUM_FILENAME));
-  return `@${relativePath.split(path.sep).join("/")}`;
-}
+const CLAUDE_SCRUM_IMPORT_MARKER = `@${CLAUDE_SCRUM_FILENAME}`;
+// Earlier versions kept the contract at the project root and imported it
+// from .claude/ with a "../" hop; the contract now sits next to its host.
+const LEGACY_IMPORT_MARKER = `@../${CLAUDE_SCRUM_FILENAME}`;
 
 function linkClaudeScrumImport(hostPath) {
-  const marker = importMarkerFor(hostPath);
   const content = fs.readFileSync(hostPath, "utf8");
-  if (content.includes(marker)) {
+  if (content.includes(LEGACY_IMPORT_MARKER)) {
+    fs.writeFileSync(hostPath, content.split(LEGACY_IMPORT_MARKER).join(CLAUDE_SCRUM_IMPORT_MARKER));
+    console.log(`init.js: import updated — ${CLAUDE_SCRUM_FILENAME} now sits next to ${path.basename(hostPath)}`);
+    return;
+  }
+  if (content.includes(CLAUDE_SCRUM_IMPORT_MARKER)) {
     return;
   }
   const missingTrailingNewline = content.length > 0 && !content.endsWith("\n");
   fs.appendFileSync(
     hostPath,
-    `${missingTrailingNewline ? "\n" : ""}\n# agent-scrum (imported contract)\n${marker}\n`
+    `${missingTrailingNewline ? "\n" : ""}\n# agent-scrum (imported contract)\n${CLAUDE_SCRUM_IMPORT_MARKER}\n`
   );
   console.log(`init.js: linked ${CLAUDE_SCRUM_FILENAME} via @import in ${path.relative(targetDir, hostPath)}`);
 }
@@ -292,11 +293,18 @@ const hostClaudeMd = fs.existsSync(rootClaudeMd)
     : null;
 
 if (hostClaudeMd && !(forceOverwrite && hostClaudeMd === rootClaudeMd)) {
+  // The contract lands in the same directory as the file importing it.
+  const contractPath = path.join(path.dirname(hostClaudeMd), CLAUDE_SCRUM_FILENAME);
   console.error(
-    `init.js: ${path.relative(targetDir, hostClaudeMd)} already exists, writing ${CLAUDE_SCRUM_FILENAME} instead of overwriting (use --force to overwrite)`
+    `init.js: ${path.relative(targetDir, hostClaudeMd)} already exists, writing ${path.relative(targetDir, contractPath)} instead of overwriting (use --force to overwrite)`
   );
-  fs.copyFileSync(path.join(packageRoot, "CLAUDE.md"), path.join(targetDir, CLAUDE_SCRUM_FILENAME));
+  fs.copyFileSync(path.join(packageRoot, "CLAUDE.md"), contractPath);
   linkClaudeScrumImport(hostClaudeMd);
+  const strandedRootContract = path.join(targetDir, CLAUDE_SCRUM_FILENAME);
+  if (contractPath !== strandedRootContract && fs.existsSync(strandedRootContract)) {
+    fs.rmSync(strandedRootContract);
+    console.log(`init.js: removed the obsolete root ${CLAUDE_SCRUM_FILENAME} (it now lives beside the host file)`);
+  }
 } else if (hostClaudeMd) {
   console.error(
     `init.js: --force given, overwriting ${rootClaudeMd} — pre-existing host rules there are replaced`

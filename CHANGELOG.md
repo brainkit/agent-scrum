@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.4] - 2026-09-06
+
+- `CLAUDE.scrum.md` is now written next to the file that imports it, so
+  the import is always a plain `@CLAUDE.scrum.md` — a project whose
+  rules live in `.claude/CLAUDE.md` gets `.claude/CLAUDE.scrum.md`
+  instead of a root file reached with `@../`. Existing installs are
+  migrated on upgrade: the import loses the `../` hop and the stray
+  root copy is removed.
+
 ## [0.1.3] - 2026-09-06
 
 - Dropped the blanket `Edit(.claude/**)` / `Write(.claude/**)` deny
