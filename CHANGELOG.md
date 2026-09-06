@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.9] - 2026-09-06
+
+- Documentation is written with the code, not in a later stage: the
+  contract and the developer prompt require docstrings/JSDoc on public
+  functions in the same edit as the implementation, and `docsEnabled`
+  now governs only a SEPARATE docs stage — off by default, because it
+  used to be on while the default route produced no doc file at all.
+- With the docs stage ON, a task must say what it did before it can
+  close: `set-summary ID "..."` stores a short outcome (<=300 chars)
+  with the task itself, `fast-close`/`batch-close` refuse without it
+  (the refusal lands in the ledger), and the summary shows on the board
+  card, in the task panel and in `board --task`. Mechanics scenario 30.
+
 ## [0.1.8] - 2026-09-06
 
 - Narrowed the guards so they stop blocking honest work:

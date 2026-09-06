@@ -27,7 +27,7 @@ function openReadOnlyDatabase(dbPath) {
 export function fetchBoardTasks(database) {
   const rows = database
     .prepare(
-      `SELECT id, title, status, assigned_agent, loop_count, priority,
+      `SELECT id, title, status, assigned_agent, loop_count, priority, summary,
               holder_pid, holder_start,
               CASE WHEN locked_at IS NULL THEN NULL
                    ELSE CAST((julianday('now') - julianday(locked_at)) * 1440 AS INTEGER) END AS age_minutes
@@ -82,6 +82,7 @@ function renderTaskCard(database, taskId) {
   console.log(`loop_count: ${task.loop_count}`);
   console.log(`error_log_path: ${task.error_log_path ?? ''}`);
   console.log(`resolution_hint: ${task.resolution_hint ?? ''}`);
+  console.log(`summary: ${task.summary ?? ''}`);
 
   const files = fetchTaskFiles(database, taskId);
   console.log('\nFiles:');

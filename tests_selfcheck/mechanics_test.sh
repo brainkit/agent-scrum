@@ -2097,6 +2097,96 @@ scenario_29_guard_precision() {
   report_pass "$scenario_name"
 }
 
+
+# --- Scenario 30: with the docs stage on, a task closes only once it says what it did ---
+scenario_30_summary_gate() {
+  local scenario_name="30: docs stage on -> no close without a short summary in the DB; the summary is capped and shows on the board"
+  reset_database
+
+  local crm=(node "$SCRATCH_DIR/scrum_crm/crm.mjs")
+  local config="$SCRATCH_DIR/scrum_crm/config.json"
+  python3 - "$config" <<'PYCFG'
+import json,sys
+p=sys.argv[1]; c=json.load(open(p)); c['docsEnabled']=True; c['testsEnabled']=False
+open(p,'w').write(json.dumps(c,indent=2)+'\n')
+PYCFG
+
+  local out id agent
+  out="$("${crm[@]}" fast-open "Summarised task" "Given a When b Then c" src/summary_demo.js)"
+  id="${out%% *}"; agent="${out#* }"
+
+  # a) closing without a summary is refused, and the refusal is recorded.
+  local stderr_file exit_code=0
+  stderr_file="$(mktemp)"
+  "${crm[@]}" fast-close "$id" "$agent" >/dev/null 2>"$stderr_file" || exit_code=$?
+  local stderr_content; stderr_content="$(cat "$stderr_file")"; rm -f "$stderr_file"
+  local status_after; status_after="$("${crm[@]}" db --scalar "SELECT status FROM tasks WHERE id=$id")"
+  if [[ "$exit_code" -eq 0 || "$stderr_content" != *"set-summary"* || "$status_after" != "CODING" ]]; then
+    report_fail "$scenario_name" "close without a summary must be refused and change nothing, exit $exit_code, status '$status_after', stderr: '$stderr_content'"
+    return
+  fi
+  local refusals; refusals="$("${crm[@]}" db --scalar "SELECT COUNT(*) FROM events WHERE task_id=$id AND kind='refusal' AND detail LIKE '%no summary%'")"
+  if [[ "$refusals" != "1" ]]; then
+    report_fail "$scenario_name" "the refusal must land in the ledger, got $refusals"
+    return
+  fi
+
+  # b) empty and oversized summaries are refused by the command itself.
+  exit_code=0
+  "${crm[@]}" set-summary "$id" "   " >/dev/null 2>&1 || exit_code=$?
+  if [[ "$exit_code" -eq 0 ]]; then
+    report_fail "$scenario_name" "an empty summary must be refused"
+    return
+  fi
+  local long_text; long_text="$(head -c 400 < /dev/zero | tr '\0' 'x')"
+  exit_code=0
+  "${crm[@]}" set-summary "$id" "$long_text" >/dev/null 2>&1 || exit_code=$?
+  if [[ "$exit_code" -eq 0 ]]; then
+    report_fail "$scenario_name" "a summary over the cap must be refused"
+    return
+  fi
+
+  # c) with a summary the close goes through, and the board shows it.
+  "${crm[@]}" set-summary "$id" "Added slug normalisation and its regression test." --agent "$agent" >/dev/null
+  "${crm[@]}" fast-close "$id" "$agent" >/dev/null
+  local final; final="$("${crm[@]}" db --scalar "SELECT status FROM tasks WHERE id=$id")"
+  if [[ "$final" != "DONE" ]]; then
+    report_fail "$scenario_name" "with a summary the task must close, status '$final'"
+    return
+  fi
+  local on_board
+  on_board="$("${crm[@]}" board --json | node -e '
+    const tasks = JSON.parse(require("fs").readFileSync(0, "utf8")).tasks;
+    console.log(tasks.some((t) => (t.summary || "").includes("slug normalisation")) ? "yes" : "no");
+  ')"
+  if [[ "$on_board" != "yes" ]]; then
+    report_fail "$scenario_name" "the summary must be part of the board payload"
+    return
+  fi
+  if ! "${crm[@]}" board --task "$id" | grep -q "summary: Added slug normalisation"; then
+    report_fail "$scenario_name" "the task card must print the summary"
+    return
+  fi
+
+  # d) with the docs stage off, no summary is required.
+  python3 - "$config" <<'PYCFG'
+import json,sys
+p=sys.argv[1]; c=json.load(open(p)); c['docsEnabled']=False
+open(p,'w').write(json.dumps(c,indent=2)+'\n')
+PYCFG
+  out="$("${crm[@]}" fast-open "Undocumented task" "Given a When b Then c" src/summary_demo2.js)"
+  id="${out%% *}"; agent="${out#* }"
+  exit_code=0
+  "${crm[@]}" fast-close "$id" "$agent" >/dev/null 2>&1 || exit_code=$?
+  final="$("${crm[@]}" db --scalar "SELECT status FROM tasks WHERE id=$id")"
+  if [[ "$exit_code" -ne 0 || "$final" != "DONE" ]]; then
+    report_fail "$scenario_name" "with the docs stage off a task must close without a summary, exit $exit_code, status '$final'"
+    return
+  fi
+
+  report_pass "$scenario_name"
+}
+
 main() {
   trap cleanup_scratch EXIT
   prepare_scratch_copy
@@ -2130,6 +2220,7 @@ main() {
   scenario_27_backlog_planning_pair
   scenario_28_report_ledger
   scenario_29_guard_precision
+  scenario_30_summary_gate
 
   echo "----"
   echo "Total: PASS=$PASS_COUNT FAIL=$FAIL_COUNT"

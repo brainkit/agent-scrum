@@ -41,7 +41,7 @@ const POLL_MS = 2000;
 
 function fetchTaskDetail(database, taskId) {
   const task = database
-    .prepare('SELECT id, title, description, status, assigned_agent, locked_at, loop_count, error_log_path, resolution_hint FROM tasks WHERE id = ?')
+    .prepare('SELECT id, title, description, status, assigned_agent, locked_at, loop_count, error_log_path, resolution_hint, summary FROM tasks WHERE id = ?')
     .get(taskId);
   if (!task) {
     return null;
@@ -83,6 +83,7 @@ const PAGE = `<!doctype html>
   .card:hover { border-color: #7a9; }
   .card .id { font-weight: 600; margin-right: 4px; }
   .card .agent { display: block; font-size: 11px; opacity: .6; margin-top: 2px; }
+  .card .summary { display: block; font-size: 11px; opacity: .8; margin-top: 3px; border-left: 2px solid #4a8; padding-left: 5px; }
   .card .loops { color: #b5651d; font-size: 11px; }
   .blocked { padding: 6px 16px 12px; color: #b03030; }
   .count { opacity: .5; font-weight: 400; }
@@ -124,6 +125,7 @@ async function refresh() {
       const cards = byStatus[s].map((t) =>
         '<div class="card" onclick="openTask(' + t.id + ')" title="' + esc(t.title) + '"><span class="id">#' + t.id + '</span>' + esc(t.title) +
         (t.loop_count > 0 ? ' <span class="loops">↻' + t.loop_count + '</span>' : '') +
+        (t.summary ? '<span class="summary">' + esc(t.summary) + '</span>' : '') +
         (t.assigned_agent ? '<span class="agent">' + esc(t.assigned_agent) + (t.stale ? ' — stale' : '') + '</span>' : '') + '</div>'
       ).join('');
       return '<div class="col"><h2>' + s + ' <span class="count">' + byStatus[s].length + '</span></h2>' + cards + '</div>';
@@ -151,6 +153,7 @@ async function renderDetail(id) {
         (t.loop_count > 0 ? ' · ↻' + t.loop_count + ' returns' : '') +
         (t.resolution_hint ? '<br>hint: ' + esc(t.resolution_hint) : '') +
         (t.error_log_path ? '<br>log: ' + esc(t.error_log_path) : '') + '</div>' +
+      (t.summary ? '<h3>What was done</h3><div class="ev status">' + esc(t.summary) + '</div>' : '') +
       '<h3>Journey (' + d.trace.length + ' events)</h3>' +
       (d.trace.length === 0 ? '<div class="ev">no events yet</div>' :
         d.trace.map((e) =>

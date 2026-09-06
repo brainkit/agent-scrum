@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS tasks (
   locked_at       TEXT,
   holder_pid      INTEGER,
   holder_start    TEXT,
+  summary         TEXT,
   error_log_path  TEXT,
   resolution_hint TEXT
 );

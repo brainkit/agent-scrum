@@ -346,7 +346,7 @@ db.exec("PRAGMA legacy_alter_table=ON");
 const tableRow = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='tasks'").get();
 const needsRebuild =
   tableRow &&
-  (!tableRow.sql.includes("'REVIEWING'") || !tableRow.sql.includes("holder_pid") || !tableRow.sql.includes("'BACKLOG'"));
+  (!tableRow.sql.includes("'REVIEWING'") || !tableRow.sql.includes("holder_pid") || !tableRow.sql.includes("'BACKLOG'") || !tableRow.sql.includes("summary"));
 if (needsRebuild) {
   // The CHECK constraint or column set predates the current schema:
   // rebuild the table in place, every row preserved (columns copied by
@@ -399,7 +399,7 @@ const STAGE_QUESTIONS = [
     prompt: "  └ check code against the project's conventions file (auto-detected; fallback scrum_crm/code_conventions.md)? [y/N] ",
   },
   { key: "testsEnabled", defaultValue: true, prompt: "Enable per-task tests and the DoD gate (a task cannot close on red/missing tests)? [Y/n] " },
-  { key: "docsEnabled", defaultValue: true, prompt: "Enable the docs stage (per-task docs before DONE)? [Y/n] " },
+  { key: "docsEnabled", defaultValue: false, prompt: "Enable a SEPARATE docs stage (a doc-writer agent producing docs/tasks/<id>.md)? Docstrings are written with the code either way. [y/N] " },
 ];
 
 function parseYesNo(answer, defaultValue) {

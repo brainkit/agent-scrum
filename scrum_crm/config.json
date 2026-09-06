@@ -6,7 +6,7 @@
   "intakeEnabled": false,
   "reviewEnabled": false,
   "testsEnabled": true,
-  "docsEnabled": true,
+  "docsEnabled": false,
   "gitAutocommit": "auto",
   "leaseMinutes": 30,
   "contextWindowTokens": 200000,

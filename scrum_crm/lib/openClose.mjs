@@ -59,7 +59,23 @@ function runGuardedStep({ dbPath, stepName, sql, taskId, agent }) {
   }
 }
 
+// With the docs stage on, a task closes only once it says what was done.
+// Same shape as the DoD gate: refuse, record the refusal, change nothing.
+function requireSummary({ dbPath, taskId, agent, config }) {
+  if (!config.docsEnabled) {
+    return;
+  }
+  const summary = runScalar(dbPath, 'SELECT summary FROM tasks WHERE id=?', [taskId]);
+  if (!summary || String(summary).trim() === '') {
+    logRefusal(dbPath, taskId, agent, 'close refused: docs stage on, no summary of what was done');
+    throw new Error(
+      `docs gate: task ${taskId} has no summary — run: node scrum_crm/crm.mjs set-summary ${taskId} "<what was done>"`,
+    );
+  }
+}
+
 export function fastClose({ taskId, agent, dbPath, crmDir, projectRoot, config }) {
+  requireSummary({ dbPath, taskId, agent, config });
   if (config.testsEnabled) {
     const dod = runTests({ target: String(taskId), crmDir, projectRoot, config });
     if (dod.exitCode !== 0) {
@@ -226,6 +242,21 @@ export function batchOpen({ specPath, dbPath, projectRoot, config }) {
 
 export function batchClose({ taskIds, dbPath, crmDir, projectRoot, config }) {
   const outputLines = [];
+  if (config.docsEnabled) {
+    const missing = taskIds.filter((taskId) => {
+      const summary = runScalar(dbPath, 'SELECT summary FROM tasks WHERE id=?', [taskId]);
+      return !summary || String(summary).trim() === '';
+    });
+    if (missing.length > 0) {
+      for (const taskId of missing) {
+        logRefusal(dbPath, taskId, 'batch_close', 'close refused: docs stage on, no summary of what was done');
+      }
+      return {
+        exitCode: 1,
+        lines: [{ stream: 'stderr', text: `docs gate: no summary for task(s) ${missing.join(', ')} — run set-summary for each before closing` }],
+      };
+    }
+  }
   if (config.testsEnabled) {
     const dod = runTests({ target: 'all', crmDir, projectRoot, config });
     if (dod.exitCode !== 0) {

@@ -268,6 +268,32 @@ export function setPriority({ dbPath, taskId, priority }) {
   }
 }
 
+// set-summary ID TEXT [--agent A] — the task's own short record of what
+// was done. Capped, because a summary that grows into a diff stops being
+// readable on a board; the full story is in the event trace and the code.
+const SUMMARY_MAX_CHARS = 300;
+
+export function setSummary({ dbPath, taskId, summary, guardAgent }) {
+  const text = String(summary || '').trim();
+  if (text === '') {
+    throw new Error('set-summary: the summary must say what was done — empty text refused');
+  }
+  if (text.length > SUMMARY_MAX_CHARS) {
+    throw new Error(`set-summary: keep it to ${SUMMARY_MAX_CHARS} characters (got ${text.length}) — one sentence on the outcome`);
+  }
+  const where = ['id=?'];
+  const params = [text, taskId];
+  if (guardAgent) {
+    where.push('assigned_agent=?');
+    params.push(guardAgent);
+  }
+  const result = runScalar(dbPath, `UPDATE tasks SET summary=? WHERE ${where.join(' AND ')} RETURNING id`, params);
+  if (!result) {
+    throw new Error(`set-summary: task ${taskId} not updated — wrong agent or missing task`);
+  }
+  return result;
+}
+
 export function setHint({ dbPath, taskId, hint }) {
   const result = runScalar(dbPath, 'UPDATE tasks SET resolution_hint=? WHERE id=? RETURNING id', [hint, taskId]);
   if (!result) {

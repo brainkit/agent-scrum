@@ -13,7 +13,9 @@ const DEFAULT_CONFIG = {
   intakeEnabled: false,
   reviewEnabled: false,
   testsEnabled: true,
-  docsEnabled: true,
+  // Docstrings are written with the code, in every route; this flag is
+  // only about a SEPARATE docs stage producing docs/tasks/<id>.md.
+  docsEnabled: false,
   gitAutocommit: 'auto',
   leaseMinutes: 30,
   contextWindowTokens: 200000,

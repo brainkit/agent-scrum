@@ -55,6 +55,38 @@ installer upgrades in place: an existing
 `.claude/settings.json` is merged, your config and DB survive (the
 schema is migrated when needed).
 
+## Where everything lives
+
+After `npx agent-scrum <project>` the tool owns exactly two directories
+and one contract file; everything else in your project is untouched.
+
+| Path | What it is | Who writes it |
+|---|---|---|
+| `CLAUDE.md` (or `CLAUDE.scrum.md` next to your own instructions) | the orchestrator contract: routing, statuses, the exact CLI calls | the installer; yours is never overwritten |
+| `.claude/agents/*.md` | the seven role prompts, loaded by Claude Code on spawn | the installer |
+| `.claude/hooks/guard_db.js`, `.claude/settings.json` | the DB guard hook and the pre-allowed/denied commands | the installer (an existing settings file is merged) |
+| `scrum_crm/config.json` | your settings: stages, test runner, `planMode`, lease window | the installer questionnaire; yours survives upgrades |
+| `scrum_crm/code_conventions.md` | the fallback conventions, used only when the conventions check is on and your project has no file of its own | the installer |
+| `scrum_crm/crm.db` | the single source of truth: tasks with full requirements, files, dependencies, and the append-only event trace | the mechanics |
+| `scrum_crm/logs/`, `scrum_crm/snapshots/` | test logs kept for returned tasks, and per-task file snapshots for rollback | the mechanics |
+| `docs/tasks/<id>.md` + a short summary in the DB | per-task documentation — only when the separate docs stage is on (off by default); the summary is what the board shows | the doc-writer agent |
+| docstrings / JSDoc in the task's own files | the default documentation, written together with the code in every route | whoever wrote the code |
+
+To see what a task produced, ask the board rather than hunting for
+files: `node scrum_crm/crm.mjs board --task <id>` prints its
+requirement, its file list (the doc file included, when there is one),
+its dependencies and the full event trace; the web board shows the same
+on a click. Nothing above needs reading by hand — the DB is queried
+through `crm.mjs db`/`board`/`report`, and the contract is loaded by
+Claude Code automatically. `scrum_crm/` and `.claude/` are added to `.gitignore` by
+the installer, so the runtime state stays out of your history.
+
+**In this repository** (if you cloned it rather than installed it):
+`README.md` is this page, `CLAUDE.md` is the contract that gets
+installed, `BENCHMARKS.md` holds the measurements and their method,
+`CHANGELOG.md` the version history, and `tests_selfcheck/` the two
+self-check suites.
+
 ## Concrete guarantees
 
 Every row is a mechanical check, not a policy; "scenario N" is a
@@ -78,6 +110,7 @@ yourself.
 | A dependency cycle is rejected before it exists | recursive-CTE check in `add-dep` | scenario 4 |
 | Group claims/advances are all-or-nothing | one transaction in `batch-claim`/`batch-advance` | scenario 20 |
 | Every task in the DB is self-contained (full requirement, not a summary) | `batch-open` `description_from` mechanical extraction | scenario 21 |
+| With the docs stage on, nothing closes without saying what it did | `set-summary` (capped, stored with the task) + a close gate in `fast-close`/`batch-close`; shown on the board | scenario 30 |
 | PLAN can be switched off for good, not just discouraged | `planMode: "off"` makes `batch-open` refuse — PLAN's only door into a backlog | scenario 26 |
 | The full process provably involves every role | each stage is enterable only via its role's `claim` channel; the `events` trace names all seven roles per task | scenario 23 |
 | A task's full journey is reconstructible without trusting anyone | `log_status_transition` trigger records every status change into `events` mechanically — raw writes included | scenario 24 |
@@ -178,7 +211,7 @@ that is a real answer, and the system will give it to you honestly.
 ## Self-checks
 
 ```bash
-./tests_selfcheck/mechanics_test.sh   # 29 scenarios, exit 0 = all pass
+./tests_selfcheck/mechanics_test.sh   # 30 scenarios, exit 0 = all pass
 ./tests_selfcheck/smoke_test.sh       # P1-P9 end-to-end, no LLM involved
 ```
 

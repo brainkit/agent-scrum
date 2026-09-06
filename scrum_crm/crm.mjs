@@ -44,10 +44,10 @@ let snapshot, restoreSnapshot;
 let runTests;
 let runBoardCommand;
 let collectReport, formatReport;
-let advanceTask, batchClaim, batchAdvance, returnTask, releaseTask, addTask, addFiles, addDep, appendDescription, setHint, setPriority;
+let advanceTask, batchClaim, batchAdvance, returnTask, releaseTask, addTask, addFiles, addDep, appendDescription, setHint, setPriority, setSummary;
 
 async function loadLibs() {
-  ({ advanceTask, batchClaim, batchAdvance, returnTask, releaseTask, addTask, addFiles, addDep, appendDescription, setHint, setPriority } = await import(
+  ({ advanceTask, batchClaim, batchAdvance, returnTask, releaseTask, addTask, addFiles, addDep, appendDescription, setHint, setPriority, setSummary } = await import(
     './lib/writeOps.mjs'
   ));
   ({ runInit, runQuery, scalarFromRows } = await import('./lib/db.mjs'));
@@ -470,6 +470,21 @@ function runReportCommand(args) {
   process.stdout.write(asJson ? `${JSON.stringify(report)}\n` : `${formatReport(report)}\n`);
 }
 
+function runSetSummaryCommand(args) {
+  const rest = [...args];
+  const guardAgent = takeFlag(rest, '--agent');
+  const [taskIdRaw, summary] = rest;
+  if (!taskIdRaw || summary === undefined) {
+    fail('usage: crm.mjs set-summary ID "what was done" [--agent A]');
+  }
+  try {
+    setSummary({ dbPath: DB_PATH, taskId: Number(taskIdRaw), summary, guardAgent });
+    process.stdout.write(`${taskIdRaw} summary set\n`);
+  } catch (error) {
+    fail(error.message);
+  }
+}
+
 const COMMANDS = {
   init: () => doInit(),
   db: runDbCommand,
@@ -483,6 +498,7 @@ const COMMANDS = {
   'add-dep': runAddDepCommand,
   'append-desc': runAppendDescCommand,
   'set-hint': runSetHintCommand,
+  'set-summary': runSetSummaryCommand,
   'set-priority': runSetPriorityCommand,
   claim: runClaimCommand,
   event: runEventCommand,

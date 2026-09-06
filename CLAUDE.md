@@ -154,18 +154,31 @@ Print one route line: `SOLO: <why>` / `PARALLEL N groups: <groups>` /
 
 3. **One message** — product code + `tests/task_$ID.test.js`, parallel
    `Write`/`Edit` calls (tests from the G-W-T, not from the
-   implementation; no Bash heredocs).
+   implementation; no Bash heredocs). Public functions get their
+   docstrings/JSDoc now, in the same edit — documentation is never
+   postponed to a later stage.
 
 4. `node scrum_crm/crm.mjs run-tests $ID` — red → fix and rerun, max 3
    iterations, then stop and report honestly.
 
-5. `node scrum_crm/crm.mjs fast-close $ID $AGENT` — re-runs the task's
+5. With the docs stage on (`"docsEnabled": true`), record what was done
+   before closing — one sentence, <=300 characters, the outcome in plain
+   words, not a diff summary:
+
+   ```bash
+   node scrum_crm/crm.mjs set-summary $ID "<what changed and why it is done>" --agent $AGENT
+   ```
+
+   `fast-close`/`batch-close` refuse to close a task without it, exactly
+   as they refuse on red tests.
+
+6. `node scrum_crm/crm.mjs fast-close $ID $AGENT` — re-runs the task's
    tests itself as a hard DoD gate (red/missing test → exit 1, nothing
    moves), then walks the guarded chain to `DONE`, logs the `done`
    event and git-autocommits per config. Non-zero exit = blocked; never
    work around it with manual status updates.
 
-6. Answer in ≤5 lines: id, status, files, test result.
+7. Answer in ≤5 lines: id, status, files, test result.
 
 Log 1-3 non-trivial decisions per task:
 `node scrum_crm/crm.mjs event $ID $AGENT <decision|blocker|handoff|fix|note> "<detail>"`.
@@ -264,7 +277,11 @@ tasks left → repeat the wave.
 - Statuses: `BACKLOG → PLANNING → READY_FOR_DEV → CODING →
   [READY_FOR_REVIEW → REVIEWING] → READY_FOR_TEST → TESTING →
   READY_FOR_DOCS → DOCUMENTING → DONE`; optional pairs via
-  `reviewEnabled`/`testsEnabled`/`docsEnabled`. Every stage is a
+  `reviewEnabled`/`testsEnabled`/`docsEnabled` — the last governs only
+  the SEPARATE docs stage (off by default: docstrings are written with
+  the code in every route). With it on, a task cannot close without a
+  short `set-summary` of what was done, and that summary shows on the
+  board. Every stage is a
   queue/active pair, planning included: `BACKLOG` holds captured work
   nobody is on, `PLANNING` means a live session is refining it right
   now — entered with `claim plan`, which records the holder, so the

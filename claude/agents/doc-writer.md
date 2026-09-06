@@ -50,7 +50,15 @@ Repeat until you get an empty response from claim:
 4. Write `docs/tasks/<ID>.md`: what the task does, the public API,
    usage examples — based on `description` and the resulting code.
 
-5. Release the task (the claim already moved it to `DOCUMENTING`;
+5. Record what was done in the DB — one sentence, <=300 characters,
+   the outcome in plain words (this is what the board shows, and the
+   close gate requires it):
+
+   ```
+   node scrum_crm/crm.mjs set-summary $ID "<what the task delivered>" --agent $AGENT
+   ```
+
+6. Release the task (the claim already moved it to `DOCUMENTING`;
    finishing = releasing the claim, the status stays `DOCUMENTING` for
    scrum-master's DoD close):
    ```
