@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.3] - 2026-09-06
+
+- Dropped the blanket `Edit(.claude/**)` / `Write(.claude/**)` deny
+  rules from the shipped settings: they blocked ordinary work in every
+  project that keeps its own agents, hooks or notes under `.claude/`.
+  The CRM's own protections stay (read-only `db`, the `sqlite3`/crm.db
+  guard hook, the deny rules on `scrum_crm/`).
+
 ## [0.1.2] - 2026-09-06
 
 - Installer: `.claude/CLAUDE.md` is now recognised as the project's

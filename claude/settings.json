@@ -14,9 +14,7 @@
       "Edit(scrum_crm/lib/**)",
       "Write(scrum_crm/lib/**)",
       "Edit(scrum_crm/init.sql)",
-      "Write(scrum_crm/init.sql)",
-      "Edit(.claude/**)",
-      "Write(.claude/**)"
+      "Write(scrum_crm/init.sql)"
     ]
   },
   "hooks": {
