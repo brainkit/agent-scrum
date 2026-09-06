@@ -19,7 +19,7 @@ export function collectReport({ dbPath, days = DEFAULT_WINDOW_DAYS }) {
   const prevented = {
     dodGateBlocks: scalar(
       dbPath,
-      `SELECT COUNT(*) FROM events WHERE kind='blocker' AND detail LIKE 'DoD gate red%' AND ${windowClause}`,
+      `SELECT COUNT(*) FROM events WHERE kind='blocker' AND (detail LIKE 'Definition of Done red%' OR detail LIKE 'DoD gate red%') AND ${windowClause}`,
       [since],
     ),
     illegalTransitions: scalar(
@@ -78,7 +78,7 @@ export function collectReport({ dbPath, days = DEFAULT_WINDOW_DAYS }) {
 }
 
 function line(label, value) {
-  return `  ${label.padEnd(52, '.')} ${String(value).padStart(5)}`;
+  return `  ${label.padEnd(58, '.')} ${String(value).padStart(5)}`;
 }
 
 export function formatReport(report) {
@@ -87,7 +87,7 @@ export function formatReport(report) {
     `Agent Scrum — mechanics ledger (last ${report.windowDays} days)`,
     '',
     'Silent failures prevented (each would have passed unnoticed)',
-    line('close on red or missing tests blocked (DoD gate)', prevented.dodGateBlocks),
+    line('closes blocked on red or missing tests (Definition of Done)', prevented.dodGateBlocks),
     line('illegal status transitions refused', prevented.illegalTransitions),
     line('BLOCKED without a stated reason refused', prevented.blockedWithoutReason),
     line('tasks refused without Given/When/Then or files', prevented.schemaGateRejections),

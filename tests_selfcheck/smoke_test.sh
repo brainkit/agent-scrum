@@ -574,11 +574,11 @@ fault_injection() {
   culprit="$(grep -oE 'task_[0-9]+' "$log" | head -n1 | sed -E 's/task_([0-9]+)/\1/')"
   [[ "$culprit" == "$S1_ID" ]] || fatal "culprit attribution: expected task_${S1_ID}, log points to task_${culprit:-?}"
 
-  # The new schema has no separate NEED_REFACTOR: a red DoD at DOCUMENTING
+  # The new schema has no separate NEED_REFACTOR: a red Definition of Done at DOCUMENTING
   # sends the task straight back to READY_FOR_DEV, the return context lives
   # in error_log_path/resolution_hint + loop_count (see the
   # enforce_status_flow trigger).
-  local resolution_hint_text="red DoD: syntax error in src/slug.js (task_${S1_ID}), see error_log_path"
+  local resolution_hint_text="red Definition of Done: syntax error in src/slug.js (task_${S1_ID}), see error_log_path"
   db "UPDATE tasks SET status='READY_FOR_DEV', error_log_path=?, resolution_hint=?, loop_count=loop_count+1 WHERE id=? AND status='DOCUMENTING'" \
     "$log" "$resolution_hint_text" "$S1_ID" >/dev/null
 
@@ -589,20 +589,20 @@ fault_injection() {
   hint_after="$(dbs "SELECT COALESCE(resolution_hint,'') FROM tasks WHERE id=?" "$S1_ID")"
 
   if [[ "$status_after" == "READY_FOR_DEV" && "$loop_after" -ge 1 && -n "$error_after" && -f "$error_after" && -n "$hint_after" ]]; then
-    mark P4 PASS "S1 -> READY_FOR_DEV (red DoD), loop_count=$loop_after, error_log_path=$error_after (exists), resolution_hint filled, culprit correctly attributed (task_${S1_ID})"
+    mark P4 PASS "S1 -> READY_FOR_DEV (red Definition of Done), loop_count=$loop_after, error_log_path=$error_after (exists), resolution_hint filled, culprit correctly attributed (task_${S1_ID})"
   else
     mark P4 FAIL "after escalation: status='$status_after' loop_count='$loop_after' error_log_path='$error_after' resolution_hint='$hint_after'"
   fi
 }
 
 # ---------------------------------------------------------------------------
-# STEP 7: S1 repair cycle (dev -> qa -> doc), then mini-DoD (S1, S4 -> DONE)
+# STEP 7: S1 repair cycle (dev -> qa -> doc), then mini-Definition of Done (S1, S4 -> DONE)
 # ---------------------------------------------------------------------------
 repair_and_first_dod() {
-  step "STEP 7: repairing S1 (READY_FOR_DEV after a red DoD -> ... -> DOCUMENTING), first DoD pass"
+  step "STEP 7: repairing S1 (READY_FOR_DEV after a red Definition of Done -> ... -> DOCUMENTING), first Definition of Done pass"
 
   do_claim dev
-  [[ "$CLAIM_ID" == "$S1_ID" ]] || fatal "dev claim (repair): expected S1 ($S1_ID) from READY_FOR_DEV (red DoD), got '$CLAIM_ID'"
+  [[ "$CLAIM_ID" == "$S1_ID" ]] || fatal "dev claim (repair): expected S1 ($S1_ID) from READY_FOR_DEV (red Definition of Done), got '$CLAIM_ID'"
   "${SNAPSHOT[@]}" "$S1_ID"
   # developer reads error_log_path/resolution_hint, fixes exactly the
   # recorded failure — returns the correct basic implementation of S1
@@ -628,15 +628,15 @@ repair_and_first_dod() {
   db "UPDATE tasks SET status='DOCUMENTING', assigned_agent=NULL, locked_at=NULL WHERE id=? AND assigned_agent=?" \
     "$S1_ID" "$CLAIM_AGENT" >/dev/null
 
-  # scrum-master: DoD pass #1 (S1, S4 are now DOCUMENTING, S2/S3 not ready yet).
+  # scrum-master: Definition of Done pass #1 (S1, S4 are now DOCUMENTING, S2/S3 not ready yet).
   log="$("${RUN_TESTS[@]}" all)"; rc=$?
-  [[ "$rc" -eq 0 ]] || fatal "crm.mjs run-tests all (DoD #1) was expected to be green, rc=$rc, log: $log"
+  [[ "$rc" -eq 0 ]] || fatal "crm.mjs run-tests all (Definition of Done #1) was expected to be green, rc=$rc, log: $log"
 
   db "UPDATE tasks SET status='DONE' WHERE status='DOCUMENTING'" >/dev/null
 
   local done_count
   done_count="$(dbs "SELECT COUNT(*) FROM tasks WHERE id IN (?,?) AND status='DONE'" "$S1_ID" "$S4_ID")"
-  [[ "$done_count" == "2" ]] || fatal "DoD #1: expected S1 and S4 in DONE, got $done_count"
+  [[ "$done_count" == "2" ]] || fatal "Definition of Done #1: expected S1 and S4 in DONE, got $done_count"
 
   rebuild_readme
   rm -rf "$SCRATCH_DIR/scrum_crm/snapshots/${S1_ID}" "$SCRATCH_DIR/scrum_crm/snapshots/${S4_ID}"
@@ -767,10 +767,10 @@ doc_wave_2() {
 }
 
 # ---------------------------------------------------------------------------
-# STEP 10: Scrum Master — final DoD, criteria P1, P6, P7, P8, P9
+# STEP 10: Scrum Master — final Definition of Done, criteria P1, P6, P7, P8, P9
 # ---------------------------------------------------------------------------
 scrum_master_final() {
-  step "STEP 10: Scrum Master finale — DoD, README, snapshots, final checks"
+  step "STEP 10: Scrum Master finale — Definition of Done, README, snapshots, final checks"
 
   "${LEASE_SWEEP[@]}" "$LEASE_STALE_MINUTES" >/dev/null
 
@@ -784,7 +784,7 @@ scrum_master_final() {
     mark P6 PASS "crm.mjs run-tests all rc=0, found 4 test files (tests/task_*.test.js)"
   else
     mark P6 FAIL "rc=$rc test_file_count=$test_file_count (log: $log)"
-    fatal "crm.mjs run-tests all (final) is not green, further DoD steps are pointless"
+    fatal "crm.mjs run-tests all (final) is not green, further Definition of Done steps are pointless"
   fi
 
   db "UPDATE tasks SET status='DONE' WHERE status='DOCUMENTING'" >/dev/null

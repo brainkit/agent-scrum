@@ -35,7 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.1.7] - 2026-09-06
 
 - `crm.mjs report [DAYS] [--json]` — the mechanics ledger: how many
-  closes on red tests the DoD gate blocked, how many illegal
+  closes on red tests the Definition of Done check blocked, how many illegal
   transitions the trigger refused, how many tasks were rejected without
   Given/When/Then, how many dead-holder claims were swept, plus rework,
   throughput and audit-trail counts. Every refusal the mechanics make
@@ -141,7 +141,7 @@ Initial release.
   finishes, so queues fill early and a crash rolls back only unfinished
   work.
 - Hard gates: schema gate (no task without Given/When/Then and files),
-  DoD gate (no close on a red or missing test suite), context-fit
+  Definition of Done check (no close on a red or missing test suite), context-fit
   routing gate (PLAN only when the work does not fit the context
   window), Node version gate at startup.
 - Event trace (`events` table) and optional git autocommit per DONE,

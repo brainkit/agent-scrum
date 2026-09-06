@@ -103,7 +103,7 @@ yourself.
 | In-progress columns only ever show live work — planning included | every `claim` sweeps dead-holder claims first; `PLANNING` is entered via `claim plan` and falls back to `BACKLOG` | scenarios 18, 27 |
 | A task can't be `BLOCKED` without a stated reason | `advance --hint` check + `enforce_blocked_reason` trigger | scenario 19 |
 | A task can't enter work without Given/When/Then criteria and files | schema gate in `fast-open`/`batch-open` | scenario 12 |
-| A task can't close `DONE` on red or missing tests | DoD gate inside `fast-close`/`batch-close` | try it — they refuse |
+| A task can't close `DONE` on red or missing tests | Definition of Done check inside `fast-close`/`batch-close` | try it — they refuse |
 | Every task leaves an audit trail (who, what, when, why) | `tasks` history + append-only `events` | scenario 13 |
 | Bad edits roll back without touching Git | per-task `snapshot`/`restore` | scenario 7 |
 | Every `DONE` can be a Git commit | `gitAutocommit`, pathspec-scoped (nested-repo safe) | scenario 14 |
@@ -195,7 +195,7 @@ node scrum_crm/crm.mjs report 30 --json # same numbers for scripts
 
 ```
 Silent failures prevented (each would have passed unnoticed)
-  close on red or missing tests blocked (DoD gate)....     7
+  close on red or missing tests blocked (Definition of Done check)....     7
   illegal status transitions refused..................     0
   ...
   TOTAL...............................................     7
@@ -249,7 +249,7 @@ every file is short enough to audit:
 - **CAS** — git-worktree isolation, not DB transactions; no trigger/gates.
 - **claude-flow** — prompt-based coordination; no enforced invariants.
 - **Claude Code Agent Teams** — shared file list; no transactions,
-  locks, leases or DoD gate.
+  locks, leases or Definition of Done check.
 
 ## Status
 

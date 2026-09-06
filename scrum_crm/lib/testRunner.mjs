@@ -1,4 +1,4 @@
-// Runs the DoD test suite for one task (or the whole suite for "all"),
+// Runs the Definition of Done test suite for one task (or the whole suite for "all"),
 // writing full stdout+stderr to a log file. Ported from run_tests.sh.
 import { spawnSync } from 'node:child_process';
 import { closeSync, mkdirSync, openSync } from 'node:fs';

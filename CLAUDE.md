@@ -89,7 +89,7 @@ Print one route line: `SOLO: <why>` / `PARALLEL N groups: <groups>` /
 **What each mode is FOR (the meaning behind the gate):**
 
 - **FAST** — the task fits one session's head: do it now, no planning,
-  no roles, but with the full DB audit (task, statuses, DoD gate).
+  no roles, but with the full DB audit (task, statuses, Definition of Done check).
   SOLO = do it yourself; PARALLEL = the same small task happens to
   split into 2-3 independent chunks each big enough to pay for its own
   executor — buying time with parallelism, nothing else.
@@ -104,7 +104,7 @@ Print one route line: `SOLO: <why>` / `PARALLEL N groups: <groups>` /
   mostly re-typed tickets to each other). On a typical backlog,
   decomposition and file assignment are mechanical work; lean keeps
   everything PLAN exists for — disjoint-group decomposition, parallel
-  executors, every DB guarantee (schema gate, DoD gate, locks, audit)
+  executors, every DB guarantee (schema gate, Definition of Done check, locks, audit)
   — and drops the manager layer: the main session plays PO, team-lead
   and scrum-master itself.
 - **PLAN (full process)** — for when the OBJECTIVE is the process
@@ -173,7 +173,7 @@ Print one route line: `SOLO: <why>` / `PARALLEL N groups: <groups>` /
    as they refuse on red tests.
 
 6. `node scrum_crm/crm.mjs fast-close $ID $AGENT` — re-runs the task's
-   tests itself as a hard DoD gate (red/missing test → exit 1, nothing
+   tests itself as a hard Definition of Done check (red/missing test → exit 1, nothing
    moves), then walks the guarded chain to `DONE`, logs the `done`
    event and git-autocommits per config. Non-zero exit = blocked; never
    work around it with manual status updates.
@@ -252,7 +252,7 @@ read its trace first:
    `READY_FOR_DEV` with notes → one targeted fix round), then step 5.
 
 5. `node scrum_crm/crm.mjs run-tests all` →
-   - green → `node scrum_crm/crm.mjs batch-close <all ids>` (hard DoD
+   - green → `node scrum_crm/crm.mjs batch-close <all ids>` (hard Definition of Done
      gate inside re-runs the suite; then drives every task to `DONE`,
      logs events, git-autocommits). Exit 1 = gate red, nothing closed.
      Exit 2 = some ids weren't in `READY_FOR_TEST`/`TESTING` —
@@ -268,7 +268,7 @@ product-owner (stories, G-W-T) → team-lead (files/deps →
 `READY_FOR_DEV`) → ONE pipelined wave: `N = min(3, READY_FOR_DEV
 count)` developers + (reviewer if enabled) + 1 qa + 1 doc-writer,
 spawned together even into empty queues (they poll; role prompts define
-the loops) → scrum-master (sweep, escalation, DoD, README). Then check
+the loops) → scrum-master (sweep, escalation, Definition of Done, README). Then check
 `db "SELECT status, COUNT(*) FROM tasks GROUP BY status"` — active
 tasks left → repeat the wave.
 

@@ -1,5 +1,5 @@
 // fast-open/fast-close/batch-open/batch-close — one-call task open/close
-// with a schema gate and a DoD (test) gate. Ported from fast_open.sh,
+// with a schema gate and a Definition of Done (test) check. Ported from fast_open.sh,
 // fast_close.sh, batch_open.mjs, batch_close.sh.
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -60,7 +60,7 @@ function runGuardedStep({ dbPath, stepName, sql, taskId, agent }) {
 }
 
 // With the docs stage on, a task closes only once it says what was done.
-// Same shape as the DoD gate: refuse, record the refusal, change nothing.
+// Same shape as the Definition of Done: refuse, record the refusal, change nothing.
 function requireSummary({ dbPath, taskId, agent, config }) {
   if (!config.docsEnabled) {
     return;
@@ -80,14 +80,14 @@ export function fastClose({ taskId, agent, dbPath, crmDir, projectRoot, config }
     const dod = runTests({ target: String(taskId), crmDir, projectRoot, config });
     if (dod.exitCode !== 0) {
       try {
-        insertEvent(dbPath, taskId, agent, 'blocker', `DoD gate red: ${dod.logPath}`);
+        insertEvent(dbPath, taskId, agent, 'blocker', `Definition of Done red: ${dod.logPath}`);
       } catch {
         // best-effort trace write, the gate failure itself is already reported below
       }
-      throw new Error(`DoD gate: task ${taskId} tests are red (log: ${dod.logPath})`);
+      throw new Error(`Definition of Done: task ${taskId} tests are red (log: ${dod.logPath})`);
     }
   } else {
-    process.stderr.write(`fast_close: DoD gate skipped for task ${taskId} (testsEnabled=false)\n`);
+    process.stderr.write(`fast_close: Definition of Done check skipped for task ${taskId} (testsEnabled=false)\n`);
   }
 
   runGuardedStep({ dbPath, stepName: 'READY_FOR_TEST', taskId, agent, sql: "UPDATE tasks SET status='READY_FOR_TEST' WHERE id=? AND assigned_agent=? RETURNING id" });
@@ -260,10 +260,10 @@ export function batchClose({ taskIds, dbPath, crmDir, projectRoot, config }) {
   if (config.testsEnabled) {
     const dod = runTests({ target: 'all', crmDir, projectRoot, config });
     if (dod.exitCode !== 0) {
-      outputLines.push({ stream: 'stderr', text: `DoD gate: full suite red (log: ${dod.logPath})` });
+      outputLines.push({ stream: 'stderr', text: `Definition of Done: full suite red (log: ${dod.logPath})` });
       for (const taskId of taskIds) {
         try {
-          insertEvent(dbPath, taskId, 'batch_close', 'blocker', `DoD gate red: ${dod.logPath}`);
+          insertEvent(dbPath, taskId, 'batch_close', 'blocker', `Definition of Done red: ${dod.logPath}`);
         } catch {
           // best-effort trace write
         }
@@ -271,7 +271,7 @@ export function batchClose({ taskIds, dbPath, crmDir, projectRoot, config }) {
       return { exitCode: 1, lines: outputLines };
     }
   } else {
-    outputLines.push({ stream: 'stderr', text: 'batch_close: DoD gate skipped (testsEnabled=false)' });
+    outputLines.push({ stream: 'stderr', text: 'batch_close: Definition of Done check skipped (testsEnabled=false)' });
   }
 
   let anySkipped = false;

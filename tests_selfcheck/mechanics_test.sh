@@ -81,7 +81,7 @@ prepare_scratch_copy() {
   # jest is not installed on the polygon -> a plain-node runner replaces the
   # regular config.json test commands, same substitution smoke_test.sh does
   # for its own polygon. run-tests runs the command via a shell, so this
-  # is transparent to fast-close/batch-close's DoD gate.
+  # is transparent to fast-close/batch-close's Definition of Done check.
   cat > "$SCRATCH_DIR/scrum_crm/config.json" <<'EOF'
 {
   "testCmdTask": "node \"tests/task_{ID}.test.js\"",
@@ -93,7 +93,7 @@ EOF
   mkdir -p "$SCRATCH_DIR/tests"
 }
 
-# Writes a task's DoD test file as a trivially passing node:assert script.
+# Writes a task's Definition of Done test file as a trivially passing node:assert script.
 write_passing_test() {
   local test_id="$1"
   mkdir -p "$SCRATCH_DIR/tests"
@@ -103,7 +103,7 @@ assert.strictEqual(1 + 1, 2);
 EOF
 }
 
-# Writes a task's DoD test file as a deliberately failing node:assert script.
+# Writes a task's Definition of Done test file as a deliberately failing node:assert script.
 write_failing_test() {
   local test_id="$1"
   mkdir -p "$SCRATCH_DIR/tests"
@@ -116,7 +116,7 @@ EOF
 reset_database() {
   rm -f "$SCRATCH_DIR/scrum_crm/crm.db" "$SCRATCH_DIR/scrum_crm/crm.db-wal" "$SCRATCH_DIR/scrum_crm/crm.db-shm"
   rm -rf "$SCRATCH_DIR/scrum_crm/snapshots"
-  # task ids restart from 1 on every reset — clear stray DoD test files so an
+  # task ids restart from 1 on every reset — clear stray Definition of Done test files so an
   # earlier scenario's tests/task_<id>.test.js can't leak into this one.
   rm -rf "$SCRATCH_DIR/tests"
   mkdir -p "$SCRATCH_DIR/tests"
@@ -760,7 +760,7 @@ scenario_13_event_trace() {
   task_id_b="$(insert_task 'Close task' 'CODING' 0)"
   agent_b="test_close_agent"
   "${DB[@]}" "UPDATE tasks SET assigned_agent=? WHERE id=?" "$agent_b" "$task_id_b" >/dev/null
-  # crm.mjs fast-close's DoD gate now runs crm.mjs run-tests first — give it a passing
+  # crm.mjs fast-close's Definition of Done check now runs crm.mjs run-tests first — give it a passing
   # test file so the close reaches DONE and the auto event fires.
   write_passing_test "$task_id_b"
 
@@ -821,7 +821,7 @@ EOF
   task_id_a="$("${git_db[@]}" --scalar "INSERT INTO tasks (title, description, status, priority) VALUES ('Git task', 'd', 'CODING', 0) RETURNING id")"
   agent_a="git_test_agent"
   "${git_db[@]}" "UPDATE tasks SET assigned_agent=? WHERE id=?" "$agent_a" "$task_id_a" >/dev/null
-  # fast-close's DoD gate runs run-tests first — a passing test file
+  # fast-close's Definition of Done check runs run-tests first — a passing test file
   # lets the close reach DONE so the commit actually happens.
   cat > "$GIT_SCRATCH_DIR/tests/task_${task_id_a}.test.js" <<TESTEOF
 const assert = require('node:assert');
@@ -956,15 +956,15 @@ TESTEOF
   report_pass "$scenario_name"
 }
 
-# --- Scenario 15: DoD gate — red/missing test blocks crm.mjs fast-close and crm.mjs batch-close ---
+# --- Scenario 15: Definition of Done check — red/missing test blocks crm.mjs fast-close and crm.mjs batch-close ---
 scenario_15_dod_gate_blocks_red_close() {
-  local scenario_name="15: DoD gate blocks crm.mjs fast-close/crm.mjs batch-close on a red or missing test suite"
+  local scenario_name="15: Definition of Done check blocks crm.mjs fast-close/crm.mjs batch-close on a red or missing test suite"
   reset_database
 
-  # a) crm.mjs fast-close on a task with a FAILING test -> exit 1, "DoD gate" in
+  # a) crm.mjs fast-close on a task with a FAILING test -> exit 1, "Definition of Done check" in
   # stderr, status stays CODING, a kind='blocker' event is logged.
   local task_id_a agent_a
-  task_id_a="$(insert_task 'DoD red task' 'CODING' 0)"
+  task_id_a="$(insert_task 'Definition of Done red task' 'CODING' 0)"
   agent_a="dod_red_agent"
   "${DB[@]}" "UPDATE tasks SET assigned_agent=? WHERE id=?" "$agent_a" "$task_id_a" >/dev/null
   write_failing_test "$task_id_a"
@@ -981,8 +981,8 @@ scenario_15_dod_gate_blocks_red_close() {
     report_fail "$scenario_name" "crm.mjs fast-close on a red test: expected exit 1, got $exit_code_a"
     return
   fi
-  if [[ "$stderr_content_a" != *"DoD gate"* ]]; then
-    report_fail "$scenario_name" "crm.mjs fast-close on a red test: expected 'DoD gate' in stderr, got: '$stderr_content_a'"
+  if [[ "$stderr_content_a" != *"Definition of Done"* ]]; then
+    report_fail "$scenario_name" "crm.mjs fast-close on a red test: expected 'Definition of Done check' in stderr, got: '$stderr_content_a'"
     return
   fi
 
@@ -1002,7 +1002,7 @@ scenario_15_dod_gate_blocks_red_close() {
 
   # b) crm.mjs fast-close on a task with NO test file at all -> same refusal.
   local task_id_b agent_b
-  task_id_b="$(insert_task 'DoD missing-test task' 'CODING' 0)"
+  task_id_b="$(insert_task 'Definition of Done missing-test task' 'CODING' 0)"
   agent_b="dod_missing_agent"
   "${DB[@]}" "UPDATE tasks SET assigned_agent=? WHERE id=?" "$agent_b" "$task_id_b" >/dev/null
   # deliberately no tests/task_${task_id_b}.test.js
@@ -1019,8 +1019,8 @@ scenario_15_dod_gate_blocks_red_close() {
     report_fail "$scenario_name" "crm.mjs fast-close with no test file: expected exit 1, got $exit_code_b"
     return
   fi
-  if [[ "$stderr_content_b" != *"DoD gate"* ]]; then
-    report_fail "$scenario_name" "crm.mjs fast-close with no test file: expected 'DoD gate' in stderr, got: '$stderr_content_b'"
+  if [[ "$stderr_content_b" != *"Definition of Done"* ]]; then
+    report_fail "$scenario_name" "crm.mjs fast-close with no test file: expected 'Definition of Done check' in stderr, got: '$stderr_content_b'"
     return
   fi
 
@@ -1053,8 +1053,8 @@ scenario_15_dod_gate_blocks_red_close() {
     report_fail "$scenario_name" "crm.mjs batch-close on a red suite: expected exit 1, got $exit_code_c"
     return
   fi
-  if [[ "$stderr_content_c" != *"DoD gate"* ]]; then
-    report_fail "$scenario_name" "crm.mjs batch-close on a red suite: expected 'DoD gate' in stderr, got: '$stderr_content_c'"
+  if [[ "$stderr_content_c" != *"Definition of Done"* ]]; then
+    report_fail "$scenario_name" "crm.mjs batch-close on a red suite: expected 'Definition of Done check' in stderr, got: '$stderr_content_c'"
     return
   fi
 
@@ -1719,7 +1719,7 @@ scenario_23_all_roles_participate() {
 
   # scrum-master: closes the wave (sweep is a no-op here, the event proves the pass).
   "${crm[@]}" sweep >/dev/null 2>&1
-  "${crm[@]}" event 1 "sm_sim" note "wave closed, DoD suite green" >/dev/null
+  "${crm[@]}" event 1 "sm_sim" note "wave closed, Definition of Done suite green" >/dev/null
 
   # Proof from the DB, not from this script's word:
   # (1) the task reached DONE — with REVIEWING/TESTING/DOCUMENTING as the

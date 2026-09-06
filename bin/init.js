@@ -398,7 +398,7 @@ const STAGE_QUESTIONS = [
     askIf: (answers) => answers.reviewEnabled,
     prompt: "  └ check code against the project's conventions file (auto-detected; fallback scrum_crm/code_conventions.md)? [y/N] ",
   },
-  { key: "testsEnabled", defaultValue: true, prompt: "Enable per-task tests and the DoD gate (a task cannot close on red/missing tests)? [Y/n] " },
+  { key: "testsEnabled", defaultValue: true, prompt: "Enable per-task tests and the Definition of Done check (a task cannot close on red/missing tests)? [Y/n] " },
   { key: "docsEnabled", defaultValue: false, prompt: "Enable a SEPARATE docs stage (a doc-writer agent producing docs/tasks/<id>.md)? Docstrings are written with the code either way. [y/N] " },
 ];
 

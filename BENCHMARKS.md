@@ -49,6 +49,6 @@ delegation baseline — the price of the bookkeeping wave.
   1181s, and solo's per-ticket cost grows slower too; context is not
   the binding constraint on a 1M window (solo peaked at ~19%).
 
-Bottom line: choose the CRM for the guarantees (audit trail, DoD gate,
+Bottom line: choose the CRM for the guarantees (audit trail, Definition of Done check,
 locks, liveness, restart-surviving state) — at best it matches the
 no-CRM baseline on speed, and it never loses on quality.

@@ -60,7 +60,7 @@ Repeat until you get an empty response from claim:
 
 6. Release the task (the claim already moved it to `DOCUMENTING`;
    finishing = releasing the claim, the status stays `DOCUMENTING` for
-   scrum-master's DoD close):
+   scrum-master's Definition of Done close):
    ```
    node scrum_crm/crm.mjs release $ID $AGENT
    ```
