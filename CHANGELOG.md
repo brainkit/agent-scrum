@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.2] - 2026-09-06
+
+- Installer: `.claude/CLAUDE.md` is now recognised as the project's
+  instruction file, same as a root `CLAUDE.md`. Projects keeping their
+  rules there used to get the contract written into a *second* file at
+  the project root, with no import line in the file they actually
+  maintain. The contract now goes to `CLAUDE.scrum.md` and is imported
+  from whichever host file exists (`@CLAUDE.scrum.md` from the root,
+  `@../CLAUDE.scrum.md` from `.claude/`), never overwriting it.
+  Covered by mechanics scenario 25.
+
 ## [0.1.1] - 2026-09-06
 
 - `agent-scrum` with no arguments now says plainly that a target

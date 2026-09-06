@@ -46,10 +46,12 @@ node scrum_crm/crm.mjs board
 The installer asks a short questionnaire (intake / review / tests /
 docs / conventions stages, test runner); `--yes` keeps the defaults.
 Everything lands in `scrum_crm/config.json`, editable any time.
-Re-running the installer upgrades in place: your `CLAUDE.md` is never
-overwritten (the contract goes to `CLAUDE.scrum.md` + one `@import`
-line), an existing `.claude/settings.json` is merged, your config and
-DB survive (the schema is migrated when needed).
+Your own instructions are never overwritten, wherever Claude Code reads
+them from — `CLAUDE.md` at the project root or `.claude/CLAUDE.md`: the
+contract goes to `CLAUDE.scrum.md` and one `@import` line is appended to
+the host file. Re-running the installer upgrades in place: an existing
+`.claude/settings.json` is merged, your config and DB survive (the
+schema is migrated when needed).
 
 ## Concrete guarantees
 
@@ -136,7 +138,7 @@ node scrum_crm/crm.mjs board --json      # board payload for scripts
 ## Self-checks
 
 ```bash
-./tests_selfcheck/mechanics_test.sh   # 24 scenarios, exit 0 = all pass
+./tests_selfcheck/mechanics_test.sh   # 25 scenarios, exit 0 = all pass
 ./tests_selfcheck/smoke_test.sh       # P1-P9 end-to-end, no LLM involved
 ```
 

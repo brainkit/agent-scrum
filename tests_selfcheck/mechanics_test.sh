@@ -1774,6 +1774,69 @@ scenario_24_status_transition_log() {
   report_pass "$scenario_name"
 }
 
+
+# --- Scenario 25: installer never overwrites the project's own instructions ---
+scenario_25_installer_host_claude_md() {
+  local scenario_name="25: installer detects the host instruction file in either location (CLAUDE.md or .claude/CLAUDE.md), imports instead of overwriting, idempotently"
+  local install_root="$TEST_TMP_ROOT/install_hosts"
+  rm -rf "$install_root"
+  local init_js="$SOURCE_CRM_DIR/bin/init.js"
+
+  # a) rules in .claude/CLAUDE.md — the contract must NOT land in a second
+  # root CLAUDE.md; it goes to CLAUDE.scrum.md, imported with a ../ path.
+  mkdir -p "$install_root/dotclaude/.claude"
+  printf '# Host rules\nrule one\n' > "$install_root/dotclaude/.claude/CLAUDE.md"
+  node "$init_js" "$install_root/dotclaude" --yes >/dev/null 2>&1
+  if [[ -f "$install_root/dotclaude/CLAUDE.md" ]]; then
+    report_fail "$scenario_name" "a .claude/CLAUDE.md host must not get a second contract at the project root"
+    return
+  fi
+  if [[ ! -f "$install_root/dotclaude/CLAUDE.scrum.md" ]]; then
+    report_fail "$scenario_name" "CLAUDE.scrum.md missing for the .claude/CLAUDE.md host"
+    return
+  fi
+  if ! grep -q '^@\.\./CLAUDE\.scrum\.md$' "$install_root/dotclaude/.claude/CLAUDE.md"; then
+    report_fail "$scenario_name" "expected '@../CLAUDE.scrum.md' in .claude/CLAUDE.md, got: '$(tail -1 "$install_root/dotclaude/.claude/CLAUDE.md")'"
+    return
+  fi
+  if ! grep -q 'rule one' "$install_root/dotclaude/.claude/CLAUDE.md"; then
+    report_fail "$scenario_name" "the host's own rules must survive"
+    return
+  fi
+
+  # b) re-running the installer must not duplicate the import.
+  node "$init_js" "$install_root/dotclaude" --yes >/dev/null 2>&1
+  local import_count
+  import_count="$(grep -c 'CLAUDE.scrum.md' "$install_root/dotclaude/.claude/CLAUDE.md")"
+  if [[ "$import_count" != "1" ]]; then
+    report_fail "$scenario_name" "upgrade must keep exactly one import line, found $import_count"
+    return
+  fi
+
+  # c) rules in the root CLAUDE.md — imported with a plain path.
+  mkdir -p "$install_root/rootmd"
+  printf '# Root rules\n' > "$install_root/rootmd/CLAUDE.md"
+  node "$init_js" "$install_root/rootmd" --yes >/dev/null 2>&1
+  if ! grep -q '^@CLAUDE\.scrum\.md$' "$install_root/rootmd/CLAUDE.md"; then
+    report_fail "$scenario_name" "expected '@CLAUDE.scrum.md' in the root host file"
+    return
+  fi
+  if ! grep -q 'Root rules' "$install_root/rootmd/CLAUDE.md"; then
+    report_fail "$scenario_name" "the root host's own rules must survive"
+    return
+  fi
+
+  # d) a project with no instructions at all gets the contract as CLAUDE.md.
+  mkdir -p "$install_root/fresh"
+  node "$init_js" "$install_root/fresh" --yes >/dev/null 2>&1
+  if ! head -1 "$install_root/fresh/CLAUDE.md" | grep -q 'Scrum-CRM'; then
+    report_fail "$scenario_name" "a fresh project must get the contract as its CLAUDE.md"
+    return
+  fi
+
+  report_pass "$scenario_name"
+}
+
 main() {
   trap cleanup_scratch EXIT
   prepare_scratch_copy
@@ -1802,6 +1865,7 @@ main() {
   scenario_22_holder_liveness
   scenario_23_all_roles_participate
   scenario_24_status_transition_log
+  scenario_25_installer_host_claude_md
 
   echo "----"
   echo "Total: PASS=$PASS_COUNT FAIL=$FAIL_COUNT"

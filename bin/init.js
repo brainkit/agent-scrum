@@ -256,36 +256,54 @@ ensureGitignoreHasEntries(targetDir, GITIGNORE_ENTRIES);
 // pulls in another file's content — used here to link CLAUDE.scrum.md into
 // an existing host CLAUDE.md so it's actually loaded, instead of sitting on
 // disk unused.
-const CLAUDE_SCRUM_IMPORT_MARKER = "@CLAUDE.scrum.md";
-const CLAUDE_SCRUM_IMPORT_BLOCK = `\n# agent-scrum (imported contract)\n${CLAUDE_SCRUM_IMPORT_MARKER}\n`;
+const CLAUDE_SCRUM_FILENAME = "CLAUDE.scrum.md";
 
-function linkClaudeScrumImport(targetClaudeMdPath) {
-  const content = fs.readFileSync(targetClaudeMdPath, "utf8");
-  if (content.includes(CLAUDE_SCRUM_IMPORT_MARKER)) {
+// Claude Code resolves an @import relative to the importing file, so a host
+// living in .claude/ must reach one directory up.
+function importMarkerFor(hostPath) {
+  const relativePath = path.relative(path.dirname(hostPath), path.join(targetDir, CLAUDE_SCRUM_FILENAME));
+  return `@${relativePath.split(path.sep).join("/")}`;
+}
+
+function linkClaudeScrumImport(hostPath) {
+  const marker = importMarkerFor(hostPath);
+  const content = fs.readFileSync(hostPath, "utf8");
+  if (content.includes(marker)) {
     return;
   }
   const missingTrailingNewline = content.length > 0 && !content.endsWith("\n");
   fs.appendFileSync(
-    targetClaudeMdPath,
-    `${missingTrailingNewline ? "\n" : ""}${CLAUDE_SCRUM_IMPORT_BLOCK}`
+    hostPath,
+    `${missingTrailingNewline ? "\n" : ""}\n# agent-scrum (imported contract)\n${marker}\n`
   );
-  console.log("init.js: linked CLAUDE.scrum.md via @import in existing CLAUDE.md");
+  console.log(`init.js: linked ${CLAUDE_SCRUM_FILENAME} via @import in ${path.relative(targetDir, hostPath)}`);
 }
 
-const targetClaudeMd = path.join(targetDir, "CLAUDE.md");
-if (fs.existsSync(targetClaudeMd) && !forceOverwrite) {
+// A project keeps its instructions either in <root>/CLAUDE.md or in
+// .claude/CLAUDE.md — Claude Code loads both locations. Whichever one the
+// project already uses is the host: it is never overwritten, the contract
+// goes to CLAUDE.scrum.md and is imported from there.
+const rootClaudeMd = path.join(targetDir, "CLAUDE.md");
+const dotClaudeMd = path.join(targetClaudeDir, "CLAUDE.md");
+const hostClaudeMd = fs.existsSync(rootClaudeMd)
+  ? rootClaudeMd
+  : fs.existsSync(dotClaudeMd)
+    ? dotClaudeMd
+    : null;
+
+if (hostClaudeMd && !(forceOverwrite && hostClaudeMd === rootClaudeMd)) {
   console.error(
-    `init.js: ${targetClaudeMd} already exists, writing CLAUDE.scrum.md instead of overwriting (use --force to overwrite)`
+    `init.js: ${path.relative(targetDir, hostClaudeMd)} already exists, writing ${CLAUDE_SCRUM_FILENAME} instead of overwriting (use --force to overwrite)`
   );
-  fs.copyFileSync(path.join(packageRoot, "CLAUDE.md"), path.join(targetDir, "CLAUDE.scrum.md"));
-  linkClaudeScrumImport(targetClaudeMd);
-} else if (fs.existsSync(targetClaudeMd)) {
+  fs.copyFileSync(path.join(packageRoot, "CLAUDE.md"), path.join(targetDir, CLAUDE_SCRUM_FILENAME));
+  linkClaudeScrumImport(hostClaudeMd);
+} else if (hostClaudeMd) {
   console.error(
-    `init.js: --force given, overwriting ${targetClaudeMd} — pre-existing host rules there are replaced`
+    `init.js: --force given, overwriting ${rootClaudeMd} — pre-existing host rules there are replaced`
   );
-  fs.copyFileSync(path.join(packageRoot, "CLAUDE.md"), targetClaudeMd);
+  fs.copyFileSync(path.join(packageRoot, "CLAUDE.md"), rootClaudeMd);
 } else {
-  fs.copyFileSync(path.join(packageRoot, "CLAUDE.md"), targetClaudeMd);
+  fs.copyFileSync(path.join(packageRoot, "CLAUDE.md"), rootClaudeMd);
 }
 
 console.log("init.js: initializing DB in the target project");
