@@ -2032,6 +2032,71 @@ scenario_28_report_ledger() {
   report_pass "$scenario_name"
 }
 
+
+# --- Scenario 29: the guard hook is narrow — mentions are not attacks ---
+scenario_29_guard_precision() {
+  local scenario_name="29: guard_db.js blocks real access to THIS project's crm.db, and lets mere mentions, unrelated databases and throwaway copies through"
+
+  hook_exit() {
+    local command="$1"
+    local payload
+    payload="$(node -e 'process.stdout.write(JSON.stringify({tool_input:{command:process.argv[1]}}))' "$command")"
+    local code=0
+    printf '%s' "$payload" | CLAUDE_PROJECT_DIR=/proj node "$GUARD_DB_JS" >/dev/null 2>&1 || code=$?
+    echo "$code"
+  }
+
+  # Real access to the project's database stays blocked.
+  local blocked_cases=(
+    'sqlite3 scrum_crm/crm.db "SELECT 1"'
+    'sqlite3 /proj/scrum_crm/crm.db ".dump"'
+    'rm -f scrum_crm/crm.db'
+    'mv scrum_crm/crm.db /tmp/stolen.db'
+    'echo garbage > scrum_crm/crm.db'
+  )
+  local command code
+  for command in "${blocked_cases[@]}"; do
+    code="$(hook_exit "$command")"
+    if [[ "$code" != "2" ]]; then
+      report_fail "$scenario_name" "expected a block (exit 2) for: $command — got $code"
+      return
+    fi
+  done
+
+  # Ordinary work that merely mentions the words, touches an unrelated
+  # database, or deletes a throwaway copy outside the project must pass:
+  # a guard that cries wolf gets worked around.
+  local allowed_cases=(
+    'node scrum_crm/crm.mjs db "SELECT 1"'
+    'git commit -m "docs: describe the sqlite3 and crm.db guard"'
+    'python3 build.py  # this script imports sqlite3 and reads scrum_crm'
+    'rm -rf /tmp/scratch && node scrum_crm/crm.mjs report'
+    'rm -f /tmp/polygon/scrum_crm/crm.db'
+    'sqlite3 data/app.db "SELECT 1"'
+  )
+  for command in "${allowed_cases[@]}"; do
+    code="$(hook_exit "$command")"
+    if [[ "$code" != "0" ]]; then
+      report_fail "$scenario_name" "expected a pass (exit 0) for: $command — got $code"
+      return
+    fi
+  done
+
+  # The shipped deny rules must stay anchored to the installed copy, so a
+  # nested checkout of the tool itself remains editable.
+  local settings="$SOURCE_CRM_DIR/claude/settings.json"
+  if grep -q '"Bash(sqlite3:\*)"' "$settings"; then
+    report_fail "$scenario_name" "the blanket Bash sqlite3 deny must be gone — the hook covers the real case"
+    return
+  fi
+  if ! grep -q '"Edit(\./scrum_crm/lib/\*\*)"' "$settings"; then
+    report_fail "$scenario_name" "deny rules must be anchored with ./ so they only cover the installed copy"
+    return
+  fi
+
+  report_pass "$scenario_name"
+}
+
 main() {
   trap cleanup_scratch EXIT
   prepare_scratch_copy
@@ -2064,6 +2129,7 @@ main() {
   scenario_26_plan_mode_off_blocks_batch_open
   scenario_27_backlog_planning_pair
   scenario_28_report_ledger
+  scenario_29_guard_precision
 
   echo "----"
   echo "Total: PASS=$PASS_COUNT FAIL=$FAIL_COUNT"

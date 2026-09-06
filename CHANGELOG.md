@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.8] - 2026-09-06
+
+- Narrowed the guards so they stop blocking honest work:
+  - the PreToolUse hook now fires only when a command actually runs
+    `sqlite3` (or rm/mv/redirect) against a CRM database inside THIS
+    project. Mentioning the words in a script, a commit message or a
+    changelog is no longer an offence, an unrelated database of your
+    own is none of its business, and a throwaway copy under /tmp can
+    be deleted.
+  - the blanket `Bash(sqlite3:*)` deny rule is gone (the hook covers
+    the real case precisely), and the file deny rules are anchored
+    with `./` so they protect the installed copy without freezing a
+    nested checkout of the tool itself.
+  Both behaviours are pinned by mechanics scenario 29.
+
 ## [0.1.7] - 2026-09-06
 
 - `crm.mjs report [DAYS] [--json]` — the mechanics ledger: how many

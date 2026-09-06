@@ -178,7 +178,7 @@ that is a real answer, and the system will give it to you honestly.
 ## Self-checks
 
 ```bash
-./tests_selfcheck/mechanics_test.sh   # 28 scenarios, exit 0 = all pass
+./tests_selfcheck/mechanics_test.sh   # 29 scenarios, exit 0 = all pass
 ./tests_selfcheck/smoke_test.sh       # P1-P9 end-to-end, no LLM involved
 ```
 
@@ -200,9 +200,14 @@ routing and judgment stay in prompts because they must.
 ## Security
 
 Mechanic calls are pre-allowed in `claude/settings.json`; a PreToolUse
-hook blocks direct `sqlite3` access and anything that could corrupt
-`crm.db`. No network calls anywhere in `scrum_crm/` or `claude/hooks/`
-— every file is short enough to audit:
+hook blocks commands that actually reach this project's `crm.db` outside
+the sanctioned CLI (a direct `sqlite3` call, `rm`/`mv`/a redirect onto
+it). The guard is deliberately narrow — mentioning those names in a
+script or a commit message is not an attack, your own unrelated
+databases are untouched, and the shipped deny rules are anchored to the
+installed copy — because a guard that cries wolf is a guard people work
+around. No network calls anywhere in `scrum_crm/` or `claude/hooks/` —
+every file is short enough to audit:
 `wc -l scrum_crm/crm.mjs scrum_crm/lib/*.mjs claude/hooks/*.js`.
 
 ## vs. alternatives
