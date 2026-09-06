@@ -43,6 +43,7 @@ let fastOpen, fastClose, batchOpen, batchClose;
 let snapshot, restoreSnapshot;
 let runTests;
 let runBoardCommand;
+let collectReport, formatReport;
 let advanceTask, batchClaim, batchAdvance, returnTask, releaseTask, addTask, addFiles, addDep, appendDescription, setHint, setPriority;
 
 async function loadLibs() {
@@ -56,6 +57,7 @@ async function loadLibs() {
   ({ snapshot, restoreSnapshot } = await import('./lib/snapshot.mjs'));
   ({ runTests } = await import('./lib/testRunner.mjs'));
   ({ runBoardCommand } = await import('./lib/board.mjs'));
+  ({ collectReport, formatReport } = await import('./lib/report.mjs'));
 }
 
 const CRM_DIR = dirname(fileURLToPath(import.meta.url));
@@ -456,6 +458,18 @@ function runSetHintCommand(args) {
   }
 }
 
+// report [DAYS] [--json] — the mechanics ledger (see lib/report.mjs).
+function runReportCommand(args) {
+  const rest = [...args];
+  const asJson = takeBoolFlag(rest, '--json');
+  const days = rest[0] ? Number(rest[0]) : 30;
+  if (!Number.isFinite(days) || days <= 0) {
+    fail('usage: crm.mjs report [DAYS] [--json]');
+  }
+  const report = collectReport({ dbPath: DB_PATH, days });
+  process.stdout.write(asJson ? `${JSON.stringify(report)}\n` : `${formatReport(report)}\n`);
+}
+
 const COMMANDS = {
   init: () => doInit(),
   db: runDbCommand,
@@ -477,6 +491,7 @@ const COMMANDS = {
   'batch-open': runBatchOpenCommand,
   'batch-close': runBatchCloseCommand,
   board: (args) => runBoardCommand(args, DB_PATH),
+  report: runReportCommand,
   snapshot: runSnapshotCommand,
   restore: runRestoreCommand,
   sweep: runSweepCommand,

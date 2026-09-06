@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.7] - 2026-09-06
+
+- `crm.mjs report [DAYS] [--json]` — the mechanics ledger: how many
+  closes on red tests the DoD gate blocked, how many illegal
+  transitions the trigger refused, how many tasks were rejected without
+  Given/When/Then, how many dead-holder claims were swept, plus rework,
+  throughput and audit-trail counts. Every refusal the mechanics make
+  is now recorded in `events` (kind='refusal'/'sweep') by the mechanics
+  themselves, so the value of the guarantees is measured from your own
+  project instead of argued about. Mechanics scenario 28.
+
 ## [0.1.6] - 2026-09-06
 
 - New `BACKLOG` status completes the queue/active pattern for planning:

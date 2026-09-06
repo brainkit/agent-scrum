@@ -5,7 +5,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { openDatabase } from './db.mjs';
 import { runQuery, runScalar } from './db.mjs';
-import { insertEvent, hostnameShort } from './claimEventSweep.mjs';
+import { insertEvent, hostnameShort, logRefusal } from './claimEventSweep.mjs';
 import { captureHolder } from './liveness.mjs';
 import { runGitAutocommit } from './git.mjs';
 import { runTests } from './testRunner.mjs';
@@ -17,9 +17,11 @@ function hasGivenWhenThen(description) {
 
 export function fastOpen({ title, description, files, dbPath }) {
   if (!hasGivenWhenThen(description)) {
+    logRefusal(dbPath, null, 'fast_open', `schema gate: no Given/When/Then in "${title}"`);
     throw new Error('schema gate: description must contain Given/When/Then acceptance criteria');
   }
   if (files.length === 0) {
+    logRefusal(dbPath, null, 'fast_open', `schema gate: no files for "${title}"`);
     throw new Error('schema gate: task_files empty');
   }
 
@@ -164,18 +166,28 @@ function resolveDescriptions(tickets, projectRoot) {
   });
 }
 
+function validateTicketsLogged(tickets, dbPath) {
+  try {
+    validateTickets(tickets);
+  } catch (error) {
+    logRefusal(dbPath, null, 'batch_open', `schema gate: ${error.message}`);
+    throw error;
+  }
+}
+
 export function batchOpen({ specPath, dbPath, projectRoot, config }) {
   // Mechanical backstop for planMode 'off': batch-open is PLAN's only door
   // into the backlog, so refusing here means PLAN cannot start at all —
   // the setting is enforced, not merely requested in a prompt.
   if (config && config.planMode === 'off') {
+    logRefusal(dbPath, null, 'batch_open', 'PLAN refused: planMode is off');
     throw new Error(
       'planMode is "off" in scrum_crm/config.json — PLAN is disabled, batch-open refused. Do the work in SOLO, or set planMode to "auto"/"ask".',
     );
   }
   const tickets = loadTickets(specPath);
   resolveDescriptions(tickets, projectRoot ?? process.cwd());
-  validateTickets(tickets);
+  validateTicketsLogged(tickets, dbPath);
 
   const database = openDatabase(dbPath);
   const insertTask = database.prepare("INSERT INTO tasks (title, description, status, priority) VALUES (?, ?, 'READY_FOR_DEV', 5) RETURNING id");

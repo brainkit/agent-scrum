@@ -145,12 +145,40 @@ examples: `CLAUDE.md` in this folder.
 ```bash
 node scrum_crm/crm.mjs board --task 42   # task card: fields, files, deps, trace
 node scrum_crm/crm.mjs board --json      # board payload for scripts
+node scrum_crm/crm.mjs report            # mechanics ledger (see below)
 ```
+
+## Is it worth it? Measure, don't argue
+
+Speed and cost are the wrong question here — measured, this system is at
+parity with a plain agent at best ([BENCHMARKS.md](BENCHMARKS.md)). What
+it sells is refusals: the steps that would otherwise pass unnoticed. So
+it counts them for you, from its own database:
+
+```bash
+node scrum_crm/crm.mjs report 30        # last 30 days, human-readable
+node scrum_crm/crm.mjs report 30 --json # same numbers for scripts
+```
+
+```
+Silent failures prevented (each would have passed unnoticed)
+  close on red or missing tests blocked (DoD gate)....     7
+  illegal status transitions refused..................     0
+  ...
+  TOTAL...............................................     7
+```
+
+Every line is written by the mechanics themselves at the moment they
+refuse (`kind='refusal'`/`'sweep'` in `events`), never by an agent
+reporting on its own work. Run it after a few weeks of real use: if the
+total stays at zero, nothing on your workload ever tried to skip the
+process and the guarantees are costing you their overhead for nothing —
+that is a real answer, and the system will give it to you honestly.
 
 ## Self-checks
 
 ```bash
-./tests_selfcheck/mechanics_test.sh   # 27 scenarios, exit 0 = all pass
+./tests_selfcheck/mechanics_test.sh   # 28 scenarios, exit 0 = all pass
 ./tests_selfcheck/smoke_test.sh       # P1-P9 end-to-end, no LLM involved
 ```
 

@@ -1981,6 +1981,57 @@ scenario_27_backlog_planning_pair() {
   report_pass "$scenario_name"
 }
 
+
+# --- Scenario 28: the mechanics ledger counts what the guarantees prevented ---
+scenario_28_report_ledger() {
+  local scenario_name="28: every refusal is recorded and 'report' counts it — the value of the guarantees is measured, not claimed"
+  reset_database
+
+  local crm=(node "$SCRATCH_DIR/scrum_crm/crm.mjs")
+
+  # Provoke one refusal of each kind.
+  "${crm[@]}" fast-open "No criteria" "just do it" src/x.js >/dev/null 2>&1 || true            # schema gate
+  "${crm[@]}" add-task "T" "Given a When b Then c" --status READY_FOR_DEV >/dev/null
+  "${crm[@]}" advance 1 DONE >/dev/null 2>&1 || true                                            # illegal transition
+  "${crm[@]}" advance 1 CODING >/dev/null
+  "${crm[@]}" advance 1 BLOCKED >/dev/null 2>&1 || true                                         # BLOCKED without a reason
+  "${DB[@]}" "UPDATE tasks SET assigned_agent='dead', locked_at=datetime('now'), holder_pid=4194000, holder_start='1' WHERE id=1" >/dev/null
+  "${crm[@]}" sweep 99999 >/dev/null 2>&1                                                       # dead-holder sweep
+
+  local json
+  json="$("${crm[@]}" report 30 --json)"
+  local counts
+  counts="$(printf '%s' "$json" | node -e '
+    const d = JSON.parse(require("fs").readFileSync(0, "utf8")).prevented;
+    console.log([d.schemaGateRejections, d.illegalTransitions, d.blockedWithoutReason, d.deadHolderSweeps].join(" "));
+  ')"
+  if [[ "$counts" != "1 1 1 1" ]]; then
+    report_fail "$scenario_name" "expected one refusal of each kind (schema/transition/blocked/sweep), got '$counts'"
+    return
+  fi
+
+  # The human-readable form must show the same total and never be empty.
+  local text total
+  text="$("${crm[@]}" report 30)"
+  total="$(printf '%s' "$json" | node -e 'console.log(JSON.parse(require("fs").readFileSync(0,"utf8")).prevented.total)')"
+  if [[ "$total" -lt 4 ]] || [[ "$text" != *"mechanics ledger"* ]] || [[ "$text" != *"TOTAL"* ]]; then
+    report_fail "$scenario_name" "report text must show the ledger and a TOTAL of at least 4, total=$total"
+    return
+  fi
+
+  # A window that predates the events must count none of them (the ledger
+  # is time-scoped, not cumulative).
+  reset_database
+  local empty_total
+  empty_total="$("${crm[@]}" report 30 --json | node -e 'console.log(JSON.parse(require("fs").readFileSync(0,"utf8")).prevented.total)')"
+  if [[ "$empty_total" != "0" ]]; then
+    report_fail "$scenario_name" "a clean database must report zero prevented failures, got $empty_total"
+    return
+  fi
+
+  report_pass "$scenario_name"
+}
+
 main() {
   trap cleanup_scratch EXIT
   prepare_scratch_copy
@@ -2012,6 +2063,7 @@ main() {
   scenario_25_installer_host_claude_md
   scenario_26_plan_mode_off_blocks_batch_open
   scenario_27_backlog_planning_pair
+  scenario_28_report_ledger
 
   echo "----"
   echo "Total: PASS=$PASS_COUNT FAIL=$FAIL_COUNT"

@@ -3,7 +3,7 @@
 // guarded, and still validated by the enforce_status_flow trigger; raw SQL
 // writes are reserved for humans via `db --unsafe-write`.
 import { openDatabase, runQuery, runScalar } from './db.mjs';
-import { hostnameShort, insertEvent } from './claimEventSweep.mjs';
+import { hostnameShort, insertEvent, logRefusal } from './claimEventSweep.mjs';
 import { captureHolder } from './liveness.mjs';
 
 function requireTaskId(value, usage) {
@@ -26,6 +26,7 @@ export function advanceTask({ dbPath, taskId, status, guardAgent, claimAgent, re
     throw new Error('advance: --claim cannot be combined with --agent/--release');
   }
   if (status === 'BLOCKED' && (!hint || hint.trim() === '')) {
+    logRefusal(dbPath, taskId, guardAgent || claimAgent || 'advance', 'BLOCKED without a reason refused');
     throw new Error('advance: BLOCKED requires a reason — pass --hint "why the task is blocked"');
   }
 
@@ -55,8 +56,15 @@ export function advanceTask({ dbPath, taskId, status, guardAgent, claimAgent, re
   }
 
   const sql = `UPDATE tasks SET ${sets.join(', ')} WHERE ${where.join(' AND ')} RETURNING id`;
-  const result = runScalar(dbPath, sql, params);
+  let result;
+  try {
+    result = runScalar(dbPath, sql, params);
+  } catch (error) {
+    logRefusal(dbPath, taskId, guardAgent || claimAgent || 'advance', `-> ${status} refused: ${error.message}`);
+    throw error;
+  }
   if (!result) {
+    logRefusal(dbPath, taskId, guardAgent || claimAgent || 'advance', `-> ${status} refused: wrong agent, already claimed, or missing task`);
     throw new Error(`advance: task ${taskId} not updated — wrong agent, already claimed, or missing task`);
   }
   if (status === 'BLOCKED') {
@@ -132,6 +140,7 @@ export function batchAdvance({ dbPath, taskIds, status, guardAgent, release }) {
         rows = statement.all(...params);
       } catch (error) {
         database.exec('ROLLBACK');
+        logRefusal(dbPath, taskId, guardAgent || 'batch_advance', `-> ${status} refused: ${error.message}`);
         throw new Error(`batch-advance: task ${taskId} -> ${status} rejected (${error.message}) — nothing advanced`);
       }
       if (rows.length === 0) {

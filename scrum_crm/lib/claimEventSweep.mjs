@@ -73,6 +73,17 @@ export function insertEvent(dbPath, taskId, agent, kind, detail) {
   runQuery(dbPath, 'INSERT INTO events (task_id, agent, kind, detail) VALUES (?,?,?,?)', [taskId, agent, kind, detail]);
 }
 
+// Mechanics ledger: every refusal the system makes is recorded, so the
+// value of the guarantees can be counted later instead of argued about.
+// Best-effort — a failed ledger write must never mask the refusal itself.
+export function logRefusal(dbPath, taskId, agent, detail) {
+  try {
+    insertEvent(dbPath, taskId, agent, 'refusal', detail);
+  } catch {
+    /* the refusal is still reported to the caller */
+  }
+}
+
 // A claim is dead when its holder SESSION is verifiably gone (pid absent,
 // or pid reused — start time mismatch). A verifiably alive holder is never
 // swept, however old the claim. Rows without holder info (legacy claims,
@@ -104,27 +115,32 @@ export function sweepStaleLeases({ minutes, dbPath, crmDir, projectRoot }) {
 
   for (const taskId of staleTaskIds(dbPath, "status='PLANNING'", minutes)) {
     runQuery(dbPath, "UPDATE tasks SET status='BACKLOG', assigned_agent=NULL, locked_at=NULL, holder_pid=NULL, holder_start=NULL WHERE id=?", [taskId]);
+    insertEvent(dbPath, taskId, 'sweep', 'sweep', 'PLANNING claim released — holder session gone');
     messages.push(`lease_sweep: task ${taskId} (PLANNING) returned to BACKLOG`);
   }
 
   for (const taskId of staleTaskIds(dbPath, "status='CODING'", minutes)) {
     restoreSnapshot({ taskId, crmDir, projectRoot });
     runQuery(dbPath, "UPDATE tasks SET status='READY_FOR_DEV', assigned_agent=NULL, locked_at=NULL, holder_pid=NULL, holder_start=NULL WHERE id=?", [taskId]);
+    insertEvent(dbPath, taskId, 'sweep', 'sweep', 'CODING claim released — holder session gone');
     messages.push(`lease_sweep: task ${taskId} (CODING) rolled back to READY_FOR_DEV`);
   }
 
   for (const taskId of staleTaskIds(dbPath, "status='TESTING'", minutes)) {
     runQuery(dbPath, "UPDATE tasks SET status='READY_FOR_TEST', assigned_agent=NULL, locked_at=NULL, holder_pid=NULL, holder_start=NULL WHERE id=?", [taskId]);
+    insertEvent(dbPath, taskId, 'sweep', 'sweep', 'TESTING claim released — holder session gone');
     messages.push(`lease_sweep: task ${taskId} (TESTING) returned to READY_FOR_TEST`);
   }
 
   for (const taskId of staleTaskIds(dbPath, "status='DOCUMENTING'", minutes)) {
     runQuery(dbPath, "UPDATE tasks SET status='READY_FOR_DOCS', assigned_agent=NULL, locked_at=NULL, holder_pid=NULL, holder_start=NULL WHERE id=?", [taskId]);
+    insertEvent(dbPath, taskId, 'sweep', 'sweep', 'DOCUMENTING claim released — holder session gone');
     messages.push(`lease_sweep: task ${taskId} (DOCUMENTING) returned to READY_FOR_DOCS`);
   }
 
   for (const taskId of staleTaskIds(dbPath, "status='REVIEWING'", minutes)) {
     runQuery(dbPath, "UPDATE tasks SET status='READY_FOR_REVIEW', assigned_agent=NULL, locked_at=NULL, holder_pid=NULL, holder_start=NULL WHERE id=?", [taskId]);
+    insertEvent(dbPath, taskId, 'sweep', 'sweep', 'REVIEWING claim released — holder session gone');
     messages.push(`lease_sweep: task ${taskId} (REVIEWING) returned to READY_FOR_REVIEW`);
   }
 
