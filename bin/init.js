@@ -35,15 +35,32 @@ if (!checkNodeVersion(process.versions.node)) {
 }
 
 function printUsage() {
+  console.log("Agent Scrum — installs the multi-agent Scrum system into a project.");
+  console.log("");
   console.log("usage: agent-scrum <target-dir> [--force] [--yes]");
-  console.log("  installs the Scrum-CRM multi-agent system into <target-dir>");
-  console.log("  --force overwrites an existing CLAUDE.md in <target-dir>");
-  console.log("  --yes   skip the setup questionnaire, keep defaults (intake off, review off, tests on, docs on, conventions off)");
+  console.log("");
+  console.log("  agent-scrum .             install into the current directory");
+  console.log(`                            (${process.cwd()})`);
+  console.log("  agent-scrum ~/myproject   install into another project");
+  console.log("");
+  console.log("  --force   replace an existing CLAUDE.md (default: keep it and add");
+  console.log("            CLAUDE.scrum.md plus one @import line)");
+  console.log("  --yes     skip the setup questionnaire (intake off, review off,");
+  console.log("            tests on, docs on, conventions off)");
+  console.log("");
+  console.log('Then: cd <target-dir> && claude "your request"');
 }
 
 const args = process.argv.slice(2);
 
+if (args.includes("--help") || args.includes("-h")) {
+  printUsage();
+  process.exit(0);
+}
+
 if (args.length === 0) {
+  console.error("agent-scrum: a target directory is required — nothing was installed.");
+  console.error("");
   printUsage();
   process.exit(1);
 }
@@ -64,6 +81,8 @@ if (unknownOption) {
 }
 
 if (positionalArgs.length === 0) {
+  console.error("agent-scrum: a target directory is required — nothing was installed.");
+  console.error("");
   printUsage();
   process.exit(1);
 }

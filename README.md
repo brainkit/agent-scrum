@@ -33,7 +33,7 @@ context — closing a chat loses nothing.
 
 ```bash
 # Install into your project (npm package, no clone needed)
-npx agent-scrum /path/to/project
+npx agent-scrum /path/to/project     # or, from inside the project: npx agent-scrum .
 
 # ...then just work — Claude Code picks up the contract automatically
 cd /path/to/project && claude "your request"
