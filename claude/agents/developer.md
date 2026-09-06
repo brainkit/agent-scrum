@@ -206,12 +206,12 @@ Repeat until you get an empty response from claim:
    `"ID AGENT"`), continue with step 2.
 
    If `OUT` is empty — the queue for you is currently empty, but the
-   pipeline may still refill it (a task in `PLANNING`/`CODING` will
+   pipeline may still refill it (a task in `BACKLOG`/`PLANNING`/`CODING` will
    reach `READY_FOR_DEV`, an occupied file will be freed, or
    `READY_FOR_REVIEW`/`READY_FOR_TEST`/`TESTING` may bounce back to
    `READY_FOR_DEV`). Check:
    ```
-   node scrum_crm/crm.mjs db --scalar "SELECT COUNT(*) FROM tasks WHERE status IN ('PLANNING','READY_FOR_DEV','CODING','READY_FOR_REVIEW')"
+   node scrum_crm/crm.mjs db --scalar "SELECT COUNT(*) FROM tasks WHERE status IN ('BACKLOG','PLANNING','READY_FOR_DEV','CODING','READY_FOR_REVIEW')"
    ```
    - Counter > 0 → `sleep 20` and repeat the claim (step 1). Keep a
      counter of consecutive empty attempts; after 15 consecutive empty

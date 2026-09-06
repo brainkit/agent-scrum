@@ -30,7 +30,7 @@ Repeat until you get an empty response from claim:
    If `OUT` is empty — the `READY_FOR_REVIEW` queue is currently empty,
    but the pipeline (developer ahead of you) may still refill it. Check:
    ```
-   node scrum_crm/crm.mjs db --scalar "SELECT COUNT(*) FROM tasks WHERE status IN ('PLANNING','READY_FOR_DEV','CODING') OR (status='REVIEWING' AND assigned_agent IS NOT NULL)"
+   node scrum_crm/crm.mjs db --scalar "SELECT COUNT(*) FROM tasks WHERE status IN ('BACKLOG','PLANNING','READY_FOR_DEV','CODING') OR (status='REVIEWING' AND assigned_agent IS NOT NULL)"
    ```
    - Counter > 0 → `sleep 20` and repeat the claim (step 1). Keep a
      counter of consecutive empty attempts; after 15 consecutive empty

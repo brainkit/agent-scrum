@@ -344,7 +344,9 @@ const initSql = fs.readFileSync(initSqlPath, "utf8");
 db.exec("PRAGMA foreign_keys=OFF");
 db.exec("PRAGMA legacy_alter_table=ON");
 const tableRow = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='tasks'").get();
-const needsRebuild = tableRow && (!tableRow.sql.includes("'REVIEWING'") || !tableRow.sql.includes("holder_pid"));
+const needsRebuild =
+  tableRow &&
+  (!tableRow.sql.includes("'REVIEWING'") || !tableRow.sql.includes("holder_pid") || !tableRow.sql.includes("'BACKLOG'"));
 if (needsRebuild) {
   // The CHECK constraint or column set predates the current schema:
   // rebuild the table in place, every row preserved (columns copied by

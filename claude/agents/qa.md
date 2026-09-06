@@ -29,7 +29,7 @@ Repeat until you get an empty response from claim:
    but the pipeline (developer/reviewer ahead of you) may still refill
    it. Check:
    ```
-   node scrum_crm/crm.mjs db --scalar "SELECT COUNT(*) FROM tasks WHERE status IN ('PLANNING','READY_FOR_DEV','CODING','READY_FOR_REVIEW','REVIEWING','READY_FOR_TEST') OR (status='TESTING' AND assigned_agent IS NOT NULL)"
+   node scrum_crm/crm.mjs db --scalar "SELECT COUNT(*) FROM tasks WHERE status IN ('BACKLOG','PLANNING','READY_FOR_DEV','CODING','READY_FOR_REVIEW','REVIEWING','READY_FOR_TEST') OR (status='TESTING' AND assigned_agent IS NOT NULL)"
    ```
    - Counter > 0 → `sleep 20` and repeat the claim (step 1). Keep a
      counter of consecutive empty attempts; after 15 consecutive empty

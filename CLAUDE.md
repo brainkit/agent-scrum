@@ -261,10 +261,18 @@ tasks left → repeat the wave.
 
 ## Mechanics (theses)
 
-- Statuses: `PLANNING → READY_FOR_DEV → CODING → [READY_FOR_REVIEW →
-  REVIEWING] → READY_FOR_TEST → TESTING → READY_FOR_DOCS → DOCUMENTING
-  → DONE`; optional pairs via `reviewEnabled`/`testsEnabled`/
-  `docsEnabled`. Any rework return → `READY_FOR_DEV`. Transitions are
+- Statuses: `BACKLOG → PLANNING → READY_FOR_DEV → CODING →
+  [READY_FOR_REVIEW → REVIEWING] → READY_FOR_TEST → TESTING →
+  READY_FOR_DOCS → DOCUMENTING → DONE`; optional pairs via
+  `reviewEnabled`/`testsEnabled`/`docsEnabled`. Every stage is a
+  queue/active pair, planning included: `BACKLOG` holds captured work
+  nobody is on, `PLANNING` means a live session is refining it right
+  now — entered with `claim plan`, which records the holder, so the
+  board shows who is on it and a dead session's task falls back to
+  `BACKLOG`. Put refinement back with `advance <id> BACKLOG --release`.
+  New tasks land in `BACKLOG` unless `--status` says otherwise; PLAN
+  lean and SOLO open work straight in `READY_FOR_DEV` as before. Any
+  rework return → `READY_FOR_DEV`. Transitions are
   trigger-validated ("Invalid status transition"); every change is
   auto-logged to `events` (kind='status').
 - `BLOCKED`: only from `CODING`, only with a reason

@@ -200,9 +200,9 @@ export function addTask({ dbPath, title, description, priority, status }) {
   if (!hasGivenWhenThen(description)) {
     throw new Error('schema gate: description must contain Given/When/Then acceptance criteria');
   }
-  const targetStatus = status || 'PLANNING';
-  if (!['PLANNING', 'READY_FOR_DEV'].includes(targetStatus)) {
-    throw new Error('add-task: --status must be PLANNING or READY_FOR_DEV');
+  const targetStatus = status || 'BACKLOG';
+  if (!['BACKLOG', 'PLANNING', 'READY_FOR_DEV'].includes(targetStatus)) {
+    throw new Error('add-task: --status must be BACKLOG, PLANNING or READY_FOR_DEV');
   }
   const id = runScalar(dbPath, 'INSERT INTO tasks (title, description, status, priority) VALUES (?,?,?,?) RETURNING id', [
     title,

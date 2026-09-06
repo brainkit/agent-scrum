@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.6] - 2026-09-06
+
+- New `BACKLOG` status completes the queue/active pattern for planning:
+  `BACKLOG` is captured work nobody is on, `PLANNING` means a live
+  session is refining it. `claim plan` moves `BACKLOG -> PLANNING` and
+  records the holder, so the board shows who is on a task during
+  planning and a dead session's task falls back to `BACKLOG` on the
+  next sweep. `add-task` now defaults to `BACKLOG`; the trigger allows
+  no shortcut from `BACKLOG` to `READY_FOR_DEV`. Existing databases
+  are migrated by the installer, tasks already in `PLANNING` stay
+  valid. Mechanics scenario 27.
+
 ## [0.1.5] - 2026-09-06
 
 - PLAN is now yours to control: `planMode` in `scrum_crm/config.json`

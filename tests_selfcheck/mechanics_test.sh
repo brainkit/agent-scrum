@@ -1650,13 +1650,27 @@ scenario_23_all_roles_participate() {
 
   local crm=(node "$SCRATCH_DIR/scrum_crm/crm.mjs")
 
-  # product-owner: creates the story (PLANNING) and logs it.
+  # product-owner: captures the story in the BACKLOG and logs it.
   "${crm[@]}" add-task "Story" "Given a shopper When checkout runs Then a receipt is produced" >/dev/null
-  "${crm[@]}" event 1 "po_sim" note "story decomposed from the raw request" >/dev/null
+  local backlog_status
+  backlog_status="$("${crm[@]}" db --scalar "SELECT status FROM tasks WHERE id=1")"
+  if [[ "$backlog_status" != "BACKLOG" ]]; then
+    report_fail "$scenario_name" "a new task must land in BACKLOG, got '$backlog_status'"
+    return
+  fi
+  "${crm[@]}" event 1 "po_sim" note "story captured from the raw request" >/dev/null
 
-  # team-lead: files + dependencies, hands the story to the dev queue.
+  # team-lead: takes it into PLANNING through its own claim channel, assigns
+  # files, then hands the refined story to the dev queue.
+  local out_plan agent_plan
+  out_plan="$("${crm[@]}" claim plan)"
+  agent_plan="${out_plan#* }"
+  if [[ "$agent_plan" != plan_* ]]; then
+    report_fail "$scenario_name" "planning must be entered via claim plan (agent 'plan_*'), got '$out_plan'"
+    return
+  fi
   "${crm[@]}" add-files 1 "src/checkout.js" >/dev/null
-  "${crm[@]}" advance 1 READY_FOR_DEV >/dev/null
+  "${crm[@]}" advance 1 READY_FOR_DEV --agent "$agent_plan" --release >/dev/null
   "${crm[@]}" event 1 "tl_sim" handoff "files assigned, moved to READY_FOR_DEV" >/dev/null
 
   # developer: enters ONLY via claim dev; finishes at READY_FOR_REVIEW.
@@ -1909,6 +1923,64 @@ PYCFG
   report_pass "$scenario_name"
 }
 
+
+# --- Scenario 27: BACKLOG/PLANNING is a queue/active pair like every other stage ---
+scenario_27_backlog_planning_pair() {
+  local scenario_name="27: BACKLOG is the queue, PLANNING is live refinement — claim plan moves and holds it, a dead planner is swept back to BACKLOG"
+  reset_database
+
+  local crm=(node "$SCRATCH_DIR/scrum_crm/crm.mjs")
+  "${crm[@]}" add-task "Idea" "Given a When b Then c" >/dev/null
+
+  # a) claim plan takes it BACKLOG -> PLANNING and records the holder.
+  local out agent
+  out="$("${crm[@]}" claim plan)"
+  agent="${out#* }"
+  local state
+  state="$("${crm[@]}" db --scalar "SELECT status || '/' || COALESCE(assigned_agent,'-') || '/' || (holder_pid IS NOT NULL) FROM tasks WHERE id=1")"
+  if [[ "$agent" != plan_* || "$state" != "PLANNING/$agent/1" ]]; then
+    report_fail "$scenario_name" "claim plan must move BACKLOG->PLANNING with a holder, got '$out' / '$state'"
+    return
+  fi
+
+  # b) a second planner finds nothing — the task is held, not queued twice.
+  local second
+  second="$("${crm[@]}" claim plan)"
+  if [[ -n "$second" ]]; then
+    report_fail "$scenario_name" "a claimed PLANNING task must not be claimable again, got '$second'"
+    return
+  fi
+
+  # c) a dead planner's task goes back to the BACKLOG queue, unclaimed.
+  "${DB[@]}" "UPDATE tasks SET holder_pid=4194000, holder_start='1' WHERE id=1" >/dev/null
+  "${crm[@]}" sweep 99999 >/dev/null 2>&1
+  state="$("${crm[@]}" db --scalar "SELECT status || '/' || COALESCE(assigned_agent,'-') FROM tasks WHERE id=1")"
+  if [[ "$state" != "BACKLOG/-" ]]; then
+    report_fail "$scenario_name" "a dead planner must release the task back to BACKLOG, got '$state'"
+    return
+  fi
+
+  # d) the trigger keeps the pair honest: BACKLOG cannot skip PLANNING.
+  local exit_code=0
+  "${DB[@]}" "UPDATE tasks SET status='READY_FOR_DEV' WHERE id=1" >/dev/null 2>&1 || exit_code=$?
+  if [[ "$exit_code" -eq 0 ]]; then
+    report_fail "$scenario_name" "BACKLOG -> READY_FOR_DEV must be rejected (planning is not optional)"
+    return
+  fi
+
+  # e) refinement can also be put back: PLANNING -> BACKLOG is legal.
+  "${crm[@]}" claim plan >/dev/null
+  exit_code=0
+  "${crm[@]}" advance 1 BACKLOG --release >/dev/null 2>&1 || exit_code=$?
+  state="$("${crm[@]}" db --scalar "SELECT status FROM tasks WHERE id=1")"
+  if [[ "$exit_code" -ne 0 || "$state" != "BACKLOG" ]]; then
+    report_fail "$scenario_name" "PLANNING -> BACKLOG must be legal, exit $exit_code, status '$state'"
+    return
+  fi
+
+  report_pass "$scenario_name"
+}
+
 main() {
   trap cleanup_scratch EXIT
   prepare_scratch_copy
@@ -1939,6 +2011,7 @@ main() {
   scenario_24_status_transition_log
   scenario_25_installer_host_claude_md
   scenario_26_plan_mode_off_blocks_batch_open
+  scenario_27_backlog_planning_pair
 
   echo "----"
   echo "Total: PASS=$PASS_COUNT FAIL=$FAIL_COUNT"

@@ -11,6 +11,7 @@ import { fetchBoardTasks } from './board.mjs';
 import { loadConfig } from './config.mjs';
 
 const BOARD_STATUSES = [
+  'BACKLOG',
   'PLANNING',
   'READY_FOR_DEV',
   'CODING',
@@ -28,7 +29,7 @@ const EXIT_STATUSES = ['BLOCKED', 'CANCELLED'];
 // docsEnabled from config.json); a disabled stage's column still shows up
 // while a task actually sits in it, so nothing ever disappears from view.
 export function enabledBoardStatuses(config) {
-  const enabled = ['PLANNING', 'READY_FOR_DEV', 'CODING'];
+  const enabled = ['BACKLOG', 'PLANNING', 'READY_FOR_DEV', 'CODING'];
   if (config.reviewEnabled) enabled.push('READY_FOR_REVIEW', 'REVIEWING');
   if (config.testsEnabled) enabled.push('READY_FOR_TEST', 'TESTING');
   if (config.docsEnabled) enabled.push('READY_FOR_DOCS', 'DOCUMENTING');

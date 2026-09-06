@@ -68,7 +68,7 @@ yourself.
 | A task with unfinished dependencies can't be claimed | dependency gate in `claim` | scenario 2 |
 | A parallel claim race resolves to exactly one winner | atomic `UPDATE ... RETURNING` | scenario 3 |
 | A crashed session can't hold work hostage | holder liveness: claims record the session's pid+start time; a dead holder is released instantly, an alive one never (lease timeout only as fallback); `CODING` rolls back via snapshot | scenarios 10, 22 |
-| In-progress columns only ever show live work | every `claim` sweeps dead-holder claims first; the board flags them | scenario 18 |
+| In-progress columns only ever show live work — planning included | every `claim` sweeps dead-holder claims first; `PLANNING` is entered via `claim plan` and falls back to `BACKLOG` | scenarios 18, 27 |
 | A task can't be `BLOCKED` without a stated reason | `advance --hint` check + `enforce_blocked_reason` trigger | scenario 19 |
 | A task can't enter work without Given/When/Then criteria and files | schema gate in `fast-open`/`batch-open` | scenario 12 |
 | A task can't close `DONE` on red or missing tests | DoD gate inside `fast-close`/`batch-close` | try it — they refuse |
@@ -95,7 +95,7 @@ measured laws: [BENCHMARKS.md](BENCHMARKS.md).
 ## Status machine
 
 ```
-PLANNING → READY_FOR_DEV → CODING → [READY_FOR_REVIEW → REVIEWING] →
+BACKLOG → PLANNING → READY_FOR_DEV → CODING → [READY_FOR_REVIEW → REVIEWING] →
   [READY_FOR_TEST → TESTING] → [READY_FOR_DOCS → DOCUMENTING] → DONE
 
 CODING → BLOCKED → PLANNING   (blocker requires a stated reason; the way
@@ -104,7 +104,11 @@ CODING → BLOCKED → PLANNING   (blocker requires a stated reason; the way
 [...] — optional pairs: reviewEnabled / testsEnabled / docsEnabled
 ```
 
-Any return for rework goes to `READY_FOR_DEV` — one entry point.
+Every stage is a queue/active pair, planning included: `BACKLOG` is
+captured work nobody is on, `PLANNING` means a live session is refining
+it (entered with `claim plan`, holder recorded — so the board shows who,
+and a dead session's task returns to `BACKLOG`). Any return for rework
+goes to `READY_FOR_DEV` — one entry point.
 `CANCELLED` is a human decision on a task not yet in work; terminal.
 Transitions are validated by a DB trigger — an invalid one fails with
 `Invalid status transition`.
@@ -146,7 +150,7 @@ node scrum_crm/crm.mjs board --json      # board payload for scripts
 ## Self-checks
 
 ```bash
-./tests_selfcheck/mechanics_test.sh   # 26 scenarios, exit 0 = all pass
+./tests_selfcheck/mechanics_test.sh   # 27 scenarios, exit 0 = all pass
 ./tests_selfcheck/smoke_test.sh       # P1-P9 end-to-end, no LLM involved
 ```
 

@@ -1,6 +1,6 @@
 ---
 name: product-owner
-description: Decomposes the raw user request into atomic Stories and registers them in the CRM with status PLANNING.
+description: Decomposes the raw user request into atomic Stories and registers them in the CRM's BACKLOG.
 tools: Bash, Read, Glob, Grep
 ---
 
@@ -60,7 +60,8 @@ node scrum_crm/crm.mjs db "SQL with ? placeholders" [param1] [param2] ...
    ```
 
    `priority` — an integer 0-9, higher = more important. The default
-   status is `PLANNING`, don't specify it explicitly (this is NOT your
+   status is `BACKLOG` — captured work nobody is on yet — don't specify
+   it explicitly (this is NOT your
    zone: Team Lead moves tasks to READY_FOR_DEV after assigning files).
 
 ## Forbidden

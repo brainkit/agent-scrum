@@ -6,6 +6,11 @@ import { restoreSnapshot } from './snapshot.mjs';
 import { captureHolder, isHolderAlive } from './liveness.mjs';
 
 const CLAIM_QUERIES = {
+  plan: `
+    UPDATE tasks SET status='PLANNING', assigned_agent=?, locked_at=datetime('now'), holder_pid=?, holder_start=?
+    WHERE id=(SELECT id FROM tasks WHERE status='BACKLOG' AND assigned_agent IS NULL
+              ORDER BY priority DESC, id ASC LIMIT 1)
+    RETURNING id;`,
   dev: `
     UPDATE tasks SET status='CODING', assigned_agent = ?, locked_at = datetime('now'), holder_pid = ?, holder_start = ?
     WHERE id = (
@@ -96,6 +101,11 @@ function staleTaskIds(dbPath, statusClauseSql, minutes) {
 
 export function sweepStaleLeases({ minutes, dbPath, crmDir, projectRoot }) {
   const messages = [];
+
+  for (const taskId of staleTaskIds(dbPath, "status='PLANNING'", minutes)) {
+    runQuery(dbPath, "UPDATE tasks SET status='BACKLOG', assigned_agent=NULL, locked_at=NULL, holder_pid=NULL, holder_start=NULL WHERE id=?", [taskId]);
+    messages.push(`lease_sweep: task ${taskId} (PLANNING) returned to BACKLOG`);
+  }
 
   for (const taskId of staleTaskIds(dbPath, "status='CODING'", minutes)) {
     restoreSnapshot({ taskId, crmDir, projectRoot });

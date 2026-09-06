@@ -126,8 +126,8 @@ function runDbCommand(args) {
 
 function runClaimCommand(args) {
   const role = args[0];
-  if (!['dev', 'review', 'qa', 'doc'].includes(role)) {
-    fail('usage: crm.mjs claim dev|review|qa|doc');
+  if (!['plan', 'dev', 'review', 'qa', 'doc'].includes(role)) {
+    fail('usage: crm.mjs claim plan|dev|review|qa|doc');
   }
   const config = loadConfig(CRM_DIR);
   const claimed = claim(role, DB_PATH, { leaseMinutes: config.leaseMinutes, crmDir: CRM_DIR, projectRoot: PROJECT_ROOT });

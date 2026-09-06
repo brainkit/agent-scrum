@@ -4,8 +4,8 @@ CREATE TABLE IF NOT EXISTS tasks (
   id              INTEGER PRIMARY KEY AUTOINCREMENT,
   title           TEXT NOT NULL,
   description     TEXT NOT NULL,
-  status          TEXT NOT NULL DEFAULT 'PLANNING'
-                  CHECK (status IN ('PLANNING','READY_FOR_DEV','CODING',
+  status          TEXT NOT NULL DEFAULT 'BACKLOG'
+                  CHECK (status IN ('BACKLOG','PLANNING','READY_FOR_DEV','CODING',
                                     'READY_FOR_REVIEW','REVIEWING',
                                     'READY_FOR_TEST','TESTING',
                                     'READY_FOR_DOCS','DOCUMENTING','DONE',
@@ -45,7 +45,8 @@ CREATE TABLE IF NOT EXISTS events (
 CREATE TRIGGER IF NOT EXISTS enforce_status_flow
 BEFORE UPDATE OF status ON tasks
 WHEN NOT (
-     (OLD.status='PLANNING'         AND NEW.status IN ('READY_FOR_DEV','CANCELLED'))
+     (OLD.status='BACKLOG'          AND NEW.status IN ('PLANNING','CANCELLED'))
+  OR (OLD.status='PLANNING'         AND NEW.status IN ('READY_FOR_DEV','BACKLOG','CANCELLED'))
   OR (OLD.status='READY_FOR_DEV'    AND NEW.status IN ('CODING','CANCELLED'))
   OR (OLD.status='CODING'           AND NEW.status IN ('READY_FOR_REVIEW','READY_FOR_TEST','READY_FOR_DEV','BLOCKED'))
   OR (OLD.status='READY_FOR_REVIEW' AND NEW.status IN ('REVIEWING'))

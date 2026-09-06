@@ -110,7 +110,7 @@ EOF
 }
 
 # ---------------------------------------------------------------------------
-# STEP 1: Product Owner — 4 Stories with status PLANNING
+# STEP 1: Product Owner — 4 Stories captured in the BACKLOG
 # ---------------------------------------------------------------------------
 S1_ID=""; S2_ID=""; S3_ID=""; S4_ID=""
 
@@ -121,7 +121,7 @@ insert_story() {
 }
 
 product_owner_wave() {
-  step "STEP 1: Product Owner — creates S1-S4 (PLANNING)"
+  step "STEP 1: Product Owner — creates S1-S4 (BACKLOG)"
 
   S1_ID="$(insert_story 'S1: slugify basic' \
 'Spec: implement slugify(input) in src/slug.js.
@@ -208,6 +208,10 @@ team_lead_wave() {
 
   db "INSERT INTO task_deps (task_id, depends_on_id) VALUES (?,?)" "$S3_ID" "$S1_ID" >/dev/null
 
+  # BACKLOG -> PLANNING (the stories are being refined) -> READY_FOR_DEV:
+  # the trigger allows no shortcut between the two.
+  db "UPDATE tasks SET status='PLANNING' WHERE id IN (?,?,?,?) AND status='BACKLOG'" \
+    "$S1_ID" "$S2_ID" "$S3_ID" "$S4_ID" >/dev/null
   db "UPDATE tasks SET status='READY_FOR_DEV' WHERE id IN (?,?,?,?) AND status='PLANNING'" \
     "$S1_ID" "$S2_ID" "$S3_ID" "$S4_ID" >/dev/null
 
