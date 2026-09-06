@@ -107,13 +107,26 @@ Transitions are validated by a DB trigger — an invalid one fails with
 ## How it works
 
 Routing is a mechanical gate (`context-fit`: does the read/write set
-fit the context window?) — FAST/SOLO by default, PLAN only when the
-work doesn't fit or the user asks for the full process. The DB has one
-door: `crm.mjs db` is read-only for agents; every write goes through
-guarded subcommands (`claim`, `advance`, `batch-claim`/`batch-advance`,
-`fast-open`/`fast-close`, `batch-open`/`batch-close`, ...); raw write
-SQL needs an explicit `--unsafe-write`, meant for humans. Full contract:
-`CLAUDE.md` in this folder.
+fit the context window?), never a judgment call. What each mode is for:
+
+- **FAST / SOLO** — the task fits one session's head: do it now, no
+  roles, full DB audit kept. The default for most requests.
+- **FAST / PARALLEL** — the same small task splits into 2-3 independent
+  chunks, each big enough to pay for its own executor: buying time
+  with parallelism, nothing else.
+- **PLAN (lean)** — the work doesn't fit one context: decompose into
+  disjoint groups, keep the backlog in the DB, dispatch executors.
+  Default PLAN — measurement showed manager roles eating the pipeline.
+- **PLAN (full process)** — only when the process itself is the goal
+  (independent reviewer/QA, role-by-role audit); gated by context-fit
+  AND an explicit request.
+
+The DB has one door: `crm.mjs db` is read-only for agents; every write
+goes through guarded subcommands (`claim`, `advance`,
+`batch-claim`/`batch-advance`, `fast-open`/`fast-close`,
+`batch-open`/`batch-close`, ...); raw write SQL needs an explicit
+`--unsafe-write`, meant for humans. Full contract with worked routing
+examples: `CLAUDE.md` in this folder.
 
 ```bash
 node scrum_crm/crm.mjs board --task 42   # task card: fields, files, deps, trace
