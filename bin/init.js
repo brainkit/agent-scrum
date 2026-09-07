@@ -37,9 +37,9 @@ if (!checkNodeVersion(process.versions.node)) {
 function printUsage() {
   console.log("Agent Scrum — installs the multi-agent Scrum system into a project.");
   console.log("");
-  console.log("usage: agent-scrum <target-dir> [--force] [--yes]");
+  console.log("usage: agent-scrum [path_to_project] [--force] [--yes]");
   console.log("");
-  console.log("  agent-scrum .             install into the current directory");
+  console.log("  agent-scrum               install into the current directory");
   console.log(`                            (${process.cwd()})`);
   console.log("  agent-scrum ~/myproject   install into another project");
   console.log("");
@@ -58,12 +58,7 @@ if (args.includes("--help") || args.includes("-h")) {
   process.exit(0);
 }
 
-if (args.length === 0) {
-  console.error("agent-scrum: a target directory is required — nothing was installed.");
-  console.error("");
-  printUsage();
-  process.exit(1);
-}
+
 
 // --force is a flag, valid in any position; every other "-"-leading arg is
 // an unknown option, never a target dir (real incident: `install.sh --force
@@ -80,14 +75,11 @@ if (unknownOption) {
   process.exit(1);
 }
 
-if (positionalArgs.length === 0) {
-  console.error("agent-scrum: a target directory is required — nothing was installed.");
-  console.error("");
-  printUsage();
-  process.exit(1);
-}
+const targetDirArg = positionalArgs.length === 0 ? process.cwd() : positionalArgs[0];
 
-const targetDirArg = positionalArgs[0];
+if (positionalArgs.length === 0) {
+  console.log(`init.js: no path given — installing into the current directory: ${targetDirArg}`);
+}
 
 const packageRoot = path.join(__dirname, "..");
 
@@ -432,19 +424,19 @@ function writeStageConfig(answers, runnerName) {
   fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`);
   const runnerLabel = runnerName === null ? "skipped (edit scrum_crm/config.json)" : runnerName;
   console.log(
-    `init.js: configured — intake ${answers.intakeEnabled ? "on" : "off"}, review ${answers.reviewEnabled ? "on" : "off"}, conventions ${answers.conventionsEnabled ? "on" : "off"}, tests ${answers.testsEnabled ? "on" : "off"}, docs ${answers.docsEnabled ? "on" : "off"}, autocommit ${{ auto: "when a git repo", 0: "never", 1: "always" }[answers.gitAutocommit || "auto"]}, plan ${answers.planMode || "auto"}, runner ${runnerLabel}`
+    `init.js: configured — intake ${answers.intakeEnabled ? "on" : "off"}, review ${answers.reviewEnabled ? "on" : "off"}, conventions ${answers.conventionsEnabled ? "on" : "off"}, tests ${answers.testsEnabled ? "on" : "off"}, docs ${answers.docsEnabled ? "on" : "off"}, autocommit ${answers.gitAutocommit === "0" ? "off" : "on"}, plan ${answers.planMode || "auto"}, runner ${runnerLabel}`
   );
 }
 
 // auto = the context-fit gate decides; ask = confirm before PLAN;
 // off = never PLAN (batch-open refuses, so it cannot start by accident).
-// auto = commit when the project is a git repo, off = never commit,
-// always = commit and complain if the project is not a repo.
+// Two answers is all a questionnaire needs: commit finished tasks, or
+// don't. ("always", which also complains when the project is not a git
+// repo, stays available by editing gitAutocommit in config.json.)
 function parseAutocommit(answer) {
   const normalized = answer.trim().toLowerCase();
-  if (normalized === "2" || normalized === "off" || normalized === "n" || normalized === "no") return "0";
-  if (normalized === "3" || normalized === "always") return "1";
-  return "auto";
+  const isNo = ["2", "n", "no", "off", "\u043d", "\u043d\u0435\u0442"].includes(normalized);
+  return isNo ? "0" : "auto";
 }
 
 function parsePlanMode(answer) {
@@ -499,7 +491,7 @@ async function runQuestionnaire() {
       runnerName = parseRunner(reply);
     }
     const commitReply = await rl.question(
-      "init.js: Commit each finished task to git? 1=when the project is a git repo (default), 2=never, 3=always: "
+      "init.js: Commit each finished task to git? 1=yes (default), 2=no: "
     );
     answers.gitAutocommit = parseAutocommit(commitReply);
     const planReply = await rl.question(
