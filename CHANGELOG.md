@@ -4,16 +4,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.14] - 2026-09-07
+
+- `agent-scrum` with no path installs into the current directory instead
+  of printing usage and exiting; the path argument is optional and named
+  `[path_to_project]`. The chosen directory is printed before anything is
+  written. (Landed after 0.1.13 was already published, so it ships here.)
+
 ## [0.1.13] - 2026-09-07
 
 - The autocommit question is now a plain yes/no (`1=yes (default),
   2=no`). The third "always" mode still exists — it is a value in
   `config.json`, not a choice worth putting to someone during setup.
-- `agent-scrum` with no path installs into the current directory instead
-  of printing usage and exiting; the path argument is now optional and
-  named `[path_to_project]`. The chosen directory is printed before
-  anything is written.
-
 ## [0.1.12] - 2026-09-07
 
 - The installer asks about git autocommit as well: commit each finished
