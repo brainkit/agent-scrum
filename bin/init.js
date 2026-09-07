@@ -432,12 +432,21 @@ function writeStageConfig(answers, runnerName) {
   fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`);
   const runnerLabel = runnerName === null ? "skipped (edit scrum_crm/config.json)" : runnerName;
   console.log(
-    `init.js: configured — intake ${answers.intakeEnabled ? "on" : "off"}, review ${answers.reviewEnabled ? "on" : "off"}, conventions ${answers.conventionsEnabled ? "on" : "off"}, tests ${answers.testsEnabled ? "on" : "off"}, docs ${answers.docsEnabled ? "on" : "off"}, plan ${answers.planMode || "auto"}, runner ${runnerLabel}`
+    `init.js: configured — intake ${answers.intakeEnabled ? "on" : "off"}, review ${answers.reviewEnabled ? "on" : "off"}, conventions ${answers.conventionsEnabled ? "on" : "off"}, tests ${answers.testsEnabled ? "on" : "off"}, docs ${answers.docsEnabled ? "on" : "off"}, autocommit ${{ auto: "when a git repo", 0: "never", 1: "always" }[answers.gitAutocommit || "auto"]}, plan ${answers.planMode || "auto"}, runner ${runnerLabel}`
   );
 }
 
 // auto = the context-fit gate decides; ask = confirm before PLAN;
 // off = never PLAN (batch-open refuses, so it cannot start by accident).
+// auto = commit when the project is a git repo, off = never commit,
+// always = commit and complain if the project is not a repo.
+function parseAutocommit(answer) {
+  const normalized = answer.trim().toLowerCase();
+  if (normalized === "2" || normalized === "off" || normalized === "n" || normalized === "no") return "0";
+  if (normalized === "3" || normalized === "always") return "1";
+  return "auto";
+}
+
 function parsePlanMode(answer) {
   const normalized = answer.trim().toLowerCase();
   if (normalized === "2" || normalized === "ask") return "ask";
@@ -489,6 +498,10 @@ async function runQuestionnaire() {
       const reply = await rl.question("init.js: Test runner? 1=jest (default), 2=vitest, 3=pytest, 4=plain node, 0=skip (configure later): ");
       runnerName = parseRunner(reply);
     }
+    const commitReply = await rl.question(
+      "init.js: Commit each finished task to git? 1=when the project is a git repo (default), 2=never, 3=always: "
+    );
+    answers.gitAutocommit = parseAutocommit(commitReply);
     const planReply = await rl.question(
       "init.js: When the work does not fit the context window — 1=PLAN automatically (default), 2=ask me first, 3=never PLAN: "
     );

@@ -50,8 +50,9 @@ node scrum_crm/crm.mjs board
 ```
 
 The installer asks a short questionnaire (intake / review — and, if
-review is on, the conventions check / tests / docs stages, test runner,
-and how PLAN should be chosen); `--yes` keeps the defaults.
+review is on, the conventions check / tests / separate docs stage, test
+runner, whether each finished task is committed to git, and how PLAN
+should be chosen); `--yes` keeps the defaults.
 Everything lands in `scrum_crm/config.json`, editable any time.
 Your own instructions are never overwritten, wherever Claude Code reads
 them from — `CLAUDE.md` at the project root or `.claude/CLAUDE.md`: the
