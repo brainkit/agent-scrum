@@ -2187,6 +2187,101 @@ PYCFG
   report_pass "$scenario_name"
 }
 
+
+# --- Scenario 31: with requireTaskForEdits on, no edit without a claim ---
+scenario_31_require_task_for_edits() {
+  local scenario_name="31: requireTaskForEdits refuses Write/Edit unless THIS session holds a claimed task — by the claim itself, not by a list of statuses"
+  reset_database
+
+  local crm=(node "$SCRATCH_DIR/scrum_crm/crm.mjs")
+  local hook="$SCRATCH_DIR/claude/hooks/guard_edits.js"
+  local config="$SCRATCH_DIR/scrum_crm/config.json"
+
+  set_require_flag() {
+    python3 - "$config" "$1" <<'PYCFG'
+import json,sys
+p=sys.argv[1]; c=json.load(open(p)); c['requireTaskForEdits']=(sys.argv[2]=='true')
+open(p,'w').write(json.dumps(c,indent=2)+'\n')
+PYCFG
+  }
+
+  hook_exit() {
+    local target="${1:-src/x.js}" code=0
+    printf '{"tool_input":{"file_path":"%s"}}' "$target" \
+      | CLAUDE_PROJECT_DIR="$SCRATCH_DIR" node "$hook" >/dev/null 2>&1 || code=$?
+    echo "$code"
+  }
+
+  # a) flag off (the default): the hook stays out of the way.
+  set_require_flag false
+  if [[ "$(hook_exit)" != "0" ]]; then
+    report_fail "$scenario_name" "with the flag off the hook must allow every edit"
+    return
+  fi
+
+  # b) flag on, nothing claimed by this session: the edit is refused.
+  set_require_flag true
+  local stderr_file code=0
+  stderr_file="$(mktemp)"
+  printf '{"tool_input":{"file_path":"src/x.js"}}' \
+    | CLAUDE_PROJECT_DIR="$SCRATCH_DIR" node "$hook" >/dev/null 2>"$stderr_file" || code=$?
+  local stderr_content; stderr_content="$(cat "$stderr_file")"; rm -f "$stderr_file"
+  if [[ "$code" != "2" || "$stderr_content" != *"fast-open"* ]]; then
+    report_fail "$scenario_name" "expected exit 2 naming fast-open, got $code / '$stderr_content'"
+    return
+  fi
+
+  # c) a claim held by THIS process tree unlocks edits, in whatever status
+  # the work happens to be: the guard reads the claim, not a status list,
+  # so renaming or adding statuses cannot break it.
+  "${crm[@]}" add-task "Held" "Given a When b Then c" --status READY_FOR_DEV >/dev/null
+  "${crm[@]}" advance 1 CODING --claim tester >/dev/null
+  "${DB[@]}" "UPDATE tasks SET holder_pid=$$ WHERE id=1" >/dev/null
+  if [[ "$(hook_exit)" != "0" ]]; then
+    report_fail "$scenario_name" "a task claimed by this session's process tree must allow edits"
+    return
+  fi
+
+  local working_status
+  for working_status in READY_FOR_TEST TESTING READY_FOR_DOCS DOCUMENTING; do
+    "${crm[@]}" advance 1 "$working_status" >/dev/null
+    "${DB[@]}" "UPDATE tasks SET assigned_agent='tester', holder_pid=$$ WHERE id=1" >/dev/null
+    if [[ "$(hook_exit)" != "0" ]]; then
+      report_fail "$scenario_name" "a claim held in $working_status must allow edits (QA and doc-writer both write files)"
+      return
+    fi
+  done
+
+  # d) releasing the claim locks editing again — the handoff is the signal,
+  # no status knowledge needed.
+  "${DB[@]}" "UPDATE tasks SET assigned_agent=NULL, holder_pid=NULL WHERE id=1" >/dev/null
+  if [[ "$(hook_exit)" != "2" ]]; then
+    report_fail "$scenario_name" "a released task must not keep edits unlocked"
+    return
+  fi
+
+  # e) another session's claim is not mine.
+  "${DB[@]}" "UPDATE tasks SET assigned_agent='stranger', holder_pid=4194000 WHERE id=1" >/dev/null
+  if [[ "$(hook_exit)" != "2" ]]; then
+    report_fail "$scenario_name" "another session's claim must not unlock edits here"
+    return
+  fi
+
+  # f) the artifacts that CREATE tasks stay writable with nothing claimed —
+  # otherwise PLAN could never open its backlog.
+  local artifact
+  for artifact in "SPEC.json" "scrum_crm/backlog_context.md" "scrum_crm/config.json"; do
+    if [[ "$(hook_exit "$artifact")" != "0" ]]; then
+      report_fail "$scenario_name" "$artifact must stay writable with no claim held (it is what opens tasks)"
+      return
+    fi
+  done
+
+  set_require_flag false
+  report_pass "$scenario_name"
+}
+
+
 main() {
   trap cleanup_scratch EXIT
   prepare_scratch_copy
@@ -2221,6 +2316,7 @@ main() {
   scenario_28_report_ledger
   scenario_29_guard_precision
   scenario_30_summary_gate
+  scenario_31_require_task_for_edits
 
   echo "----"
   echo "Total: PASS=$PASS_COUNT FAIL=$FAIL_COUNT"

@@ -3,6 +3,7 @@
   "testCmdAll": "npx --no-install jest",
   "conventionsFile": "",
   "planMode": "auto",
+  "requireTaskForEdits": false,
   "intakeEnabled": false,
   "reviewEnabled": false,
   "testsEnabled": true,

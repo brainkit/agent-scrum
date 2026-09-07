@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.11] - 2026-09-07
+
+- The contract now says plainly what goes through the CRM: every
+  request that changes the repository — ops fixes, config edits and
+  one-line patches included — is registered before the first edit,
+  and the CRM is not opt-in per request. Observed in the field: a
+  session with the contract loaded did real work without opening a
+  task, because registration only read as a rule for 'proper' coding
+  tasks.
+- New optional backstop `requireTaskForEdits` (off by default): with
+  it on, `claude/hooks/guard_edits.js` refuses `Write`/`Edit` unless the
+  session HOLDS A CLAIM on a task, matched through the process ancestry
+  of that claim. The guard reads the claim itself, never a list of
+  statuses, so it keeps working when the status machine changes — and it
+  covers every writing role (QA in TESTING, the doc-writer in
+  DOCUMENTING) without naming them. Mechanics scenario 31.
+
 ## [0.1.10] - 2026-09-07
 
 - "DoD" is spelled out as "Definition of Done" everywhere a person

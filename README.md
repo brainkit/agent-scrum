@@ -116,6 +116,7 @@ yourself.
 | A dependency cycle is rejected before it exists | recursive-CTE check in `add-dep` | scenario 4 |
 | Group claims/advances are all-or-nothing | one transaction in `batch-claim`/`batch-advance` | scenario 20 |
 | Every task in the DB is self-contained (full requirement, not a summary) | `batch-open` `description_from` mechanical extraction | scenario 21 |
+| Agents can be barred from editing files outside a task | `requireTaskForEdits: true` + the `guard_edits` hook: `Write`/`Edit` refused unless this session holds a claim (any status — the guard reads the claim, not a status list) | scenario 31 |
 | With the docs stage on, nothing closes without saying what it did | `set-summary` (capped, stored with the task) + a close gate in `fast-close`/`batch-close`; shown on the board | scenario 30 |
 | PLAN can be switched off for good, not just discouraged | `planMode: "off"` makes `batch-open` refuse — PLAN's only door into a backlog | scenario 26 |
 | The full process provably involves every role | each stage is enterable only via its role's `claim` channel; the `events` trace names all seven roles per task | scenario 23 |
@@ -217,7 +218,7 @@ that is a real answer, and the system will give it to you honestly.
 ## Self-checks
 
 ```bash
-./tests_selfcheck/mechanics_test.sh   # 30 scenarios, exit 0 = all pass
+./tests_selfcheck/mechanics_test.sh   # 31 scenarios, exit 0 = all pass
 ./tests_selfcheck/smoke_test.sh       # P1-P9 end-to-end, no LLM involved
 ```
 

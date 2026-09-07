@@ -38,6 +38,27 @@ questions in ONE message, then STOP. Otherwise record each accepted
 default as one `Assumed: ...` line in the same message as the scoring
 and continue. Assumptions MUST land in the task's `description`.
 
+## What goes through the CRM
+
+Every request that CHANGES this repository goes through the CRM — code,
+configs, scripts, deploy fixes, one-line hotfixes, "just quickly patch
+this" included. The CRM is not opt-in per request and does not wait to
+be named: if the contract is loaded, the work is registered before the
+first edit, so the board and the trace show what happened.
+
+Nothing needs registering when nothing changes: answering a question,
+reading code, explaining a failure, a routing decision itself. If you
+end up editing after all, open the task first.
+
+Optional mechanical backstop: with `"requireTaskForEdits": true` in
+`scrum_crm/config.json`, `Write`/`Edit` are refused unless this session
+HOLDS A CLAIM on a task — any task, in whatever status the work is in;
+the guard reads the claim, never a list of statuses. Releasing the claim
+locks editing again, and another session's claim unlocks nothing here.
+The files that create tasks (`SPEC.json`, `backlog_context.md`,
+`scrum_crm/`) stay writable, or PLAN could never open its backlog. Off
+by default.
+
 ## Routing — mechanical, never intuitive
 
 Estimate the read/write set and run, in the SAME message as the scout:
