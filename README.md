@@ -4,7 +4,16 @@
 [![license](https://img.shields.io/npm/l/agent-scrum)](LICENSE)
 [![node](https://img.shields.io/node/v/agent-scrum)](https://nodejs.org)
 
-Install: [`npx agent-scrum <project>`](https://www.npmjs.com/package/agent-scrum)
+```bash
+npx agent-scrum                     # install into the current directory
+npx agent-scrum <path_to_project>   # or into another one
+```
+
+(npm's own sidebar suggests `npm i agent-scrum` — that works too, but this
+is a one-shot installer, not a runtime dependency: run it with `npx`, or
+`npm rm agent-scrum` once it has finished. While it stays in
+`node_modules`, `npx agent-scrum` keeps running that pinned copy instead
+of the latest release.)
 
 Transactional coordination for Claude Code subagents: a Scrum team whose
 rules live in a SQLite database — triggers, atomic claims, file locks,

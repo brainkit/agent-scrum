@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.15] - 2026-09-07
+
+- When the installer is run from a copy inside the project's
+  `node_modules` (someone followed npm's `npm i agent-scrum`
+  sidebar), it now says so at the end: the package is a one-shot
+  installer, `npm rm agent-scrum` is safe, and while it stays
+  installed `npx agent-scrum` keeps running that pinned copy instead
+  of the latest release. The README says the same next to the
+  install command.
+
 ## [0.1.14] - 2026-09-07
 
 - `agent-scrum` with no path installs into the current directory instead

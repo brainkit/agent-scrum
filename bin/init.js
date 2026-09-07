@@ -511,7 +511,21 @@ async function runQuestionnaire() {
   writeStageConfig(answers, runnerName);
 }
 
+// True when this very script lives inside the target project's
+// node_modules — i.e. the package was installed as a dependency rather
+// than run once with npx.
+function isInstalledAsDependency() {
+  const nodeModulesDir = path.join(targetDir, "node_modules") + path.sep;
+  return packageRoot.startsWith(nodeModulesDir);
+}
+
 runQuestionnaire().then(() => {
   console.log("init.js: done. Next step:");
   console.log(`  cd ${targetDir} && claude "your request"`);
+  if (isInstalledAsDependency()) {
+    console.log("");
+    console.log("init.js: note — agent-scrum is a one-shot installer, not a runtime dependency.");
+    console.log("  Its work here is finished, so you can drop it:  npm rm agent-scrum");
+    console.log("  (while it stays installed, `npx agent-scrum` runs THIS pinned copy, not the latest release)");
+  }
 });
