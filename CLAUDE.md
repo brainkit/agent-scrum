@@ -50,9 +50,18 @@ Nothing needs registering when nothing changes: answering a question,
 reading code, explaining a failure, a routing decision itself. If you
 end up editing after all, open the task first.
 
-Optional mechanical backstop: with `"requireTaskForEdits": true` in
-`scrum_crm/config.json`, `Write`/`Edit` are refused unless this session
-HOLDS A CLAIM on a task — any task, in whatever status the work is in;
+**One deliverable, one task — and the request rarely holds just one.**
+"Write the loader, the execution harness and the tests" is three tasks,
+not one; so is a request that grows while you work on it. The moment you
+finish a task, that task is closed and you hold nothing: opening the
+next one comes BEFORE the next edit, never after. A session that closes
+its first task and keeps coding is exactly the drift this contract
+exists to prevent — the board then shows one task while five things
+happened.
+
+This is enforced, not requested: `"requireTaskForEdits": true` (the
+default) makes `Write`/`Edit` refused unless this session HOLDS A CLAIM
+on a task — any task, in whatever status the work is in;
 the guard reads the claim, never a list of statuses. Releasing the claim
 locks editing again, and another session's claim unlocks nothing here.
 The files that create tasks (`SPEC.json`, `backlog_context.md`,

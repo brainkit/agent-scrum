@@ -1,7 +1,7 @@
 {
   "name": "agent-scrum",
-  "version": "0.1.15",
-  "description": "Agent Scrum \u2014 transactional coordination for Claude Code subagents: a Scrum team with database-enforced guarantees.",
+  "version": "0.1.16",
+  "description": "Guardrails for AI coding agents (Claude Code): tasks live in SQLite and cannot close on red tests, parallel agents cannot touch each other's files, every step leaves an audit trail \u2014 rules in the database, not in prompts.",
   "license": "MIT",
   "bin": {
     "agent-scrum": "bin/init.js"
@@ -11,11 +11,23 @@
   },
   "keywords": [
     "claude-code",
+    "claude",
+    "ai-agents",
+    "agentic",
+    "coding-agent",
+    "llm",
+    "agent-orchestration",
     "multi-agent",
+    "subagents",
     "orchestration",
+    "guardrails",
+    "definition-of-done",
+    "task-board",
+    "kanban",
     "scrum",
     "sqlite",
-    "subagents"
+    "audit-trail",
+    "autonomous-agents"
   ],
   "files": [
     "bin/",

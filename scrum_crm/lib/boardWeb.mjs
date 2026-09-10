@@ -29,7 +29,11 @@ const EXIT_STATUSES = ['BLOCKED', 'CANCELLED'];
 // docsEnabled from config.json); a disabled stage's column still shows up
 // while a task actually sits in it, so nothing ever disappears from view.
 export function enabledBoardStatuses(config) {
-  const enabled = ['BACKLOG', 'PLANNING', 'READY_FOR_DEV', 'CODING'];
+  // BACKLOG and PLANNING are deliberately absent: SOLO — the common
+  // route — opens work straight in READY_FOR_DEV, so those columns would
+  // sit empty forever. The client still renders any status that actually
+  // holds a task, so a PLAN run shows them the moment they fill.
+  const enabled = ['READY_FOR_DEV', 'CODING'];
   if (config.reviewEnabled) enabled.push('READY_FOR_REVIEW', 'REVIEWING');
   if (config.testsEnabled) enabled.push('READY_FOR_TEST', 'TESTING');
   if (config.docsEnabled) enabled.push('READY_FOR_DOCS', 'DOCUMENTING');

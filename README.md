@@ -6,36 +6,57 @@
 
 ```bash
 npx agent-scrum                     # install into the current directory
-npx agent-scrum <path_to_project>   # or into another one
+```
+or
+```bash
+npx agent-scrum <path_to_project>   # install into path
 ```
 
-(npm's own sidebar suggests `npm i agent-scrum` — that works too, but this
-is a one-shot installer, not a runtime dependency: run it with `npx`, or
-`npm rm agent-scrum` once it has finished. While it stays in
-`node_modules`, `npx agent-scrum` keeps running that pinned copy instead
-of the latest release.)
+![the board refusing a close on red tests](https://raw.githubusercontent.com/brainkit/agent-scrum/main/docs/demo.gif)
 
-Transactional coordination for Claude Code subagents: a Scrum team whose
-rules live in a SQLite database — triggers, atomic claims, file locks,
-leases — not in prompts.
+**Your agent says "done". The tests are red. Nobody notices.**
 
-## Why
+Agent Scrum makes that impossible: closing a task is a database
+transaction that runs the tests first. Skipping a step, taking a file
+another agent holds, closing without acceptance criteria — each is a SQL
+error, not a promise someone remembered to keep.
 
-**Process rules live in the database, not in prompts.** Skip a step,
-grab another agent's file, close a task without green tests — you get a
-SQL error. A prompt is a request an agent can break silently; that
-silent drift is the documented failure mode of multi-agent systems
-(inter-agent misalignment in the
-[MAST taxonomy](https://arxiv.org/abs/2503.13657)).
+## What it refuses
 
-**Many chats, one project — safe by construction.** Several Claude Code
-sessions over the same repo become concurrent actors over shared state:
-one DB holds the backlog, each chat `claim`s its next task atomically,
-file locks and dependency gates keep them out of each other's work, a
-crashed chat's task is released the moment its session dies (OS
-liveness check, not a timeout), and the web board shows
-everyone's live picture. The state lives in the DB, not in any chat's
-context — closing a chat loses nothing.
+| It stops | Because |
+|---|---|
+| closing a task on red or missing tests | the close runs them itself |
+| two agents editing the same file | the second claim is refused |
+| starting work whose dependency is unfinished | the claim skips it |
+| a task with no acceptance criteria | the insert is rejected |
+| "done" without saying what was done | the summary is required (docs stage on) |
+| work lost when a session dies | its claim is released, edits rolled back |
+| files changed with no task at all | edits are refused until one is open (`requireTaskForEdits`, on by default) |
+
+Every row is a test you can run: `./tests_selfcheck/mechanics_test.sh`
+(31 scenarios, no LLM involved — the rules live in the schema, so they
+hold for an agent, a script, or you).
+
+Try the refusal yourself in a scratch directory:
+
+```bash
+mkdir /tmp/demo && cd /tmp/demo && npx agent-scrum --yes
+node scrum_crm/crm.mjs fast-open "Add sum" "Given 2 and 2 When sum(2,2) Then 4" src/sum.js
+# write src/sum.js with a bug and tests/task_1.test.js, then:
+node scrum_crm/crm.mjs fast-close 1 <agent id from fast-open>
+```
+
+## How it holds
+
+**Rules in the database, not in prompts.** A prompt is a request an
+agent can break silently — the documented failure mode of multi-agent
+systems ([MAST](https://arxiv.org/abs/2503.13657)). A schema cannot be
+forgotten or summarised away.
+
+**Many chats, one project.** Sessions over the same repo claim tasks
+atomically, file locks keep them apart, a crashed chat's task is
+released the moment its session dies (OS liveness, not a timeout), and
+the state lives in the DB — closing a chat loses nothing.
 
 ## Requirements
 
@@ -58,23 +79,17 @@ cd /path/to/project && claude "your request"
 node scrum_crm/crm.mjs board
 ```
 
-The installer asks a short questionnaire (intake / review — and, if
-review is on, the conventions check / tests / separate docs stage, test
-runner, whether each finished task is committed to git, and how PLAN
-should be chosen); `--yes` keeps the defaults.
-Everything lands in `scrum_crm/config.json`, editable any time.
-Your own instructions are never overwritten, wherever Claude Code reads
-them from — `CLAUDE.md` at the project root or `.claude/CLAUDE.md`: the
-contract goes to a `CLAUDE.scrum.md` written next to that file, and one
-`@CLAUDE.scrum.md` import line is appended to it. Re-running the
-installer upgrades in place: an existing
-`.claude/settings.json` is merged, your config and DB survive (the
-schema is migrated when needed).
+The installer asks a short questionnaire (stages, test runner, git
+autocommit, PLAN mode) and writes `scrum_crm/config.json`; `--yes` takes
+the defaults. Your own `CLAUDE.md` (or `.claude/CLAUDE.md`) is never
+overwritten — the contract lands beside it as `CLAUDE.scrum.md` with one
+`@import` line. Re-running upgrades in place: settings merged, config
+and DB kept, schema migrated.
 
 ## Where everything lives
 
-After `npx agent-scrum <project>` the tool owns exactly two directories
-and one contract file; everything else in your project is untouched.
+The tool owns two directories and one contract file; everything else in
+your project is untouched.
 
 | Path | What it is | Who writes it |
 |---|---|---|
@@ -88,20 +103,9 @@ and one contract file; everything else in your project is untouched.
 | `docs/tasks/<id>.md` + a short summary in the DB | per-task documentation — only when the separate docs stage is on (off by default); the summary is what the board shows | the doc-writer agent |
 | docstrings / JSDoc in the task's own files | the default documentation, written together with the code in every route | whoever wrote the code |
 
-To see what a task produced, ask the board rather than hunting for
-files: `node scrum_crm/crm.mjs board --task <id>` prints its
-requirement, its file list (the doc file included, when there is one),
-its dependencies and the full event trace; the web board shows the same
-on a click. Nothing above needs reading by hand — the DB is queried
-through `crm.mjs db`/`board`/`report`, and the contract is loaded by
-Claude Code automatically. `scrum_crm/` and `.claude/` are added to `.gitignore` by
-the installer, so the runtime state stays out of your history.
-
-**In this repository** (if you cloned it rather than installed it):
-`README.md` is this page, `CLAUDE.md` is the contract that gets
-installed, `BENCHMARKS.md` holds the measurements and their method,
-`CHANGELOG.md` the version history, and `tests_selfcheck/` the two
-self-check suites.
+`board --task <id>` shows what a task produced — requirement, files,
+dependencies, full trace — so none of this needs reading by hand.
+`scrum_crm/` and `.claude/` go into `.gitignore` automatically.
 
 ## Concrete guarantees
 

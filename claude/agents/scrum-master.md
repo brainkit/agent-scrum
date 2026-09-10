@@ -100,7 +100,10 @@ RC=$?
    ```
    for id in $(node scrum_crm/crm.mjs db --scalar "SELECT group_concat(id,' ') FROM tasks WHERE status='DOCUMENTING' AND assigned_agent IS NULL"); do node scrum_crm/crm.mjs advance $id DONE; done
    ```
-2. Rebuild the project's README.md from the content of all
+2. Rebuild the project's README.md — a change to a shared file, so open
+   a task for it first (`fast-open "Rebuild README" "<Given/When/Then>"
+   README.md`), which also gives you the claim the edit guard requires,
+   and close it when the rebuild is done. Build it from the content of all
    `docs/tasks/*.md` (Glob + Read them, Write to the project root
    README.md). You are the ONLY writer of shared project files in this
    role.

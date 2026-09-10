@@ -10,10 +10,11 @@ const DEFAULT_CONFIG = {
   // PLAN routing: 'auto' (gate decides) | 'ask' (confirm first) | 'off'
   // (never PLAN — batch-open refuses, so it cannot start by accident)
   planMode: 'auto',
-  // With this on, a session may only change files while it holds a task
-  // in CODING (enforced by claude/hooks/guard_edits.js) — registration
-  // stops being a prompt rule a session can quietly skip.
-  requireTaskForEdits: false,
+  // On by default: a session may only change files while it holds a
+  // claim (enforced by claude/hooks/guard_edits.js), so registering the
+  // work stops being a prompt rule a session can quietly skip. Set it to
+  // false for a repository where agents should be free to edit anything.
+  requireTaskForEdits: true,
   intakeEnabled: false,
   reviewEnabled: false,
   testsEnabled: true,

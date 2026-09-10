@@ -446,6 +446,40 @@ function parsePlanMode(answer) {
   return "auto";
 }
 
+// Guessing beats defaulting: a fresh project has no jest, so picking jest
+// for it means every close fails on "red tests" that were never run. Read
+// what the project actually uses and fall back to plain node, which needs
+// nothing installed.
+function detectRunner() {
+  const packageJsonPath = path.join(targetDir, "package.json");
+  if (fs.existsSync(packageJsonPath)) {
+    try {
+      const hostPackage = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
+      const declared = Object.keys({
+        ...(hostPackage.dependencies || {}),
+        ...(hostPackage.devDependencies || {}),
+      });
+      const testScript = String((hostPackage.scripts || {}).test || "");
+      if (declared.includes("jest") || testScript.includes("jest")) return "jest";
+      if (declared.includes("vitest") || testScript.includes("vitest")) return "vitest";
+    } catch {
+      // an unreadable package.json tells us nothing; fall through
+    }
+  }
+  const pythonMarkers = ["pyproject.toml", "requirements.txt", "requirements-dev.txt", "setup.cfg", "tox.ini"];
+  for (const marker of pythonMarkers) {
+    const markerPath = path.join(targetDir, marker);
+    if (fs.existsSync(markerPath)) {
+      try {
+        if (fs.readFileSync(markerPath, "utf8").includes("pytest")) return "pytest";
+      } catch {
+        // unreadable marker, keep looking
+      }
+    }
+  }
+  return "plainNode";
+}
+
 // Returns a runner name, or null = the user declined the choice (config
 // left untouched, to be edited manually in scrum_crm/config.json).
 function parseRunner(answer) {
@@ -470,13 +504,14 @@ async function runQuestionnaire() {
     for (const question of STAGE_QUESTIONS) {
       answers[question.key] = question.defaultValue;
     }
-    writeStageConfig(answers, "jest");
+    writeStageConfig(answers, detectRunner());
     return;
   }
 
   const readline = require("node:readline/promises");
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-  let runnerName = "jest";
+  const detectedRunner = detectRunner();
+  let runnerName = detectedRunner;
   try {
     for (const question of STAGE_QUESTIONS) {
       if (question.askIf && !question.askIf(answers)) {
@@ -487,8 +522,11 @@ async function runQuestionnaire() {
       answers[question.key] = parseYesNo(reply, question.defaultValue);
     }
     if (answers.testsEnabled) {
-      const reply = await rl.question("init.js: Test runner? 1=jest (default), 2=vitest, 3=pytest, 4=plain node, 0=skip (configure later): ");
-      runnerName = parseRunner(reply);
+      const runnerLabels = { jest: "jest", vitest: "vitest", pytest: "pytest", plainNode: "plain node" };
+      const reply = await rl.question(
+        `init.js: Test runner? Enter=${runnerLabels[detectedRunner]} (detected), 1=jest, 2=vitest, 3=pytest, 4=plain node, 0=skip: `
+      );
+      runnerName = reply.trim() === "" ? detectedRunner : parseRunner(reply);
     }
     const commitReply = await rl.question(
       "init.js: Commit each finished task to git? 1=yes (default), 2=no: "
