@@ -162,8 +162,11 @@ Every stage is a queue/active pair, planning included: `BACKLOG` is
 captured work nobody is on, `PLANNING` means a live session is refining
 it (entered with `claim plan`, holder recorded — so the board shows who,
 and a dead session's task returns to `BACKLOG`). Any return for rework
-goes to `READY_FOR_DEV` — one entry point.
-`CANCELLED` is a human decision on a task not yet in work; terminal.
+goes to `READY_FOR_DEV` — one entry point. `CODING → BACKLOG` exists for
+one reason: a claim nobody has touched for `abandonMinutes` is released
+there, because a plan left for hours needs re-planning rather than
+re-claiming. `CANCELLED` is a human decision on a task not yet in work;
+terminal.
 Transitions are validated by a DB trigger — an invalid one fails with
 `Invalid status transition`.
 
@@ -232,7 +235,7 @@ that is a real answer, and the system will give it to you honestly.
 ## Self-checks
 
 ```bash
-./tests_selfcheck/mechanics_test.sh   # 31 scenarios, exit 0 = all pass
+./tests_selfcheck/mechanics_test.sh   # 32 scenarios, exit 0 = all pass
 ./tests_selfcheck/smoke_test.sh       # P1-P9 end-to-end, no LLM involved
 ```
 

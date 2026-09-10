@@ -10,6 +10,7 @@
   "docsEnabled": false,
   "gitAutocommit": "auto",
   "leaseMinutes": 30,
+  "abandonMinutes": 480,
   "contextWindowTokens": 200000,
   "contextFitThreshold": 0.6,
   "testCmdExamples": {

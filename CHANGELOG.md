@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.17] - 2026-09-10
+
+- Forgotten work no longer hangs forever. Liveness answered "is the
+  holder alive", which a chat that claimed a task and moved on always
+  is — one task sat in CODING for 50 hours with a healthy session
+  holding it. The sweep now also asks "has anything happened": a claim
+  untouched for `abandonMinutes` (default 480, 0 disables) is released,
+  from PLANNING/CODING back to BACKLOG (the plan is stale) and from the
+  later stages to their own queue, without rolling files back — nothing
+  was interrupted. The release is recorded with the idle time.
+- The edit guard doubles as a heartbeat: touching a file refreshes the
+  claim, so a slow worker keeps its task and only genuinely idle ones
+  expire.
+- `CODING -> BACKLOG` is now a legal transition (the abandonment path);
+  the trigger rejected it and was right to, so the machine gained the
+  edge instead of the sweep working around it. Mechanics scenario 32.
+
 ## [0.1.16] - 2026-09-07
 
 - `requireTaskForEdits` defaults to **on**: a session may only change

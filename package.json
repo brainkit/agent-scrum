@@ -1,6 +1,6 @@
 {
   "name": "agent-scrum",
-  "version": "0.1.16",
+  "version": "0.1.17",
   "description": "Guardrails for AI coding agents (Claude Code): tasks live in SQLite and cannot close on red tests, parallel agents cannot touch each other's files, every step leaves an audit trail \u2014 rules in the database, not in prompts.",
   "license": "MIT",
   "bin": {

@@ -326,10 +326,16 @@ tasks left → repeat the wave.
   (`advance <id> BLOCKED --hint "why"` — trigger-enforced); the only
   exit is `BLOCKED → PLANNING` with the task REFORMULATED
   (`append-desc`) before re-queuing. `CANCELLED` is a human decision.
-- Claims are atomic and record the holder session (pid + start time);
-  sweep asks the OS — an alive holder is never swept, a dead one is
-  released instantly; `leaseMinutes` is only the no-holder-info
-  fallback.
+- Claims are atomic and record the holder session (pid + start time).
+  A dead holder is released instantly (its `CODING` work rolled back to
+  `READY_FOR_DEV`); `leaseMinutes` is only the fallback for rows with no
+  holder info. A LIVE holder that has not touched the task for
+  `abandonMinutes` (default 480) is released too — being forgotten is
+  not the same as being slow — and that work goes back to `BACKLOG`
+  from `PLANNING`/`CODING` (the plan is stale, a human re-plans it) or
+  to its own queue from the later stages, with no rollback: nothing was
+  interrupted, so what is on disk is deliberate. Every edit through the
+  guard hook counts as activity, so real work never expires.
 - `claim dev` enforces file locks and the dependency gate.
   PARALLEL/PLAN (lean) pre-assign disjoint groups instead:
   `batch-claim` / `batch-advance` (all-or-nothing transactions).

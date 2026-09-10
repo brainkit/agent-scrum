@@ -132,7 +132,7 @@ function runClaimCommand(args) {
     fail('usage: crm.mjs claim plan|dev|review|qa|doc');
   }
   const config = loadConfig(CRM_DIR);
-  const claimed = claim(role, DB_PATH, { leaseMinutes: config.leaseMinutes, crmDir: CRM_DIR, projectRoot: PROJECT_ROOT });
+  const claimed = claim(role, DB_PATH, { leaseMinutes: config.leaseMinutes, abandonMinutes: config.abandonMinutes, crmDir: CRM_DIR, projectRoot: PROJECT_ROOT });
   if (claimed) {
     process.stdout.write(`${claimed.id} ${claimed.agent}\n`);
   }
@@ -222,7 +222,8 @@ function runRestoreCommand(args) {
 
 function runSweepCommand(args) {
   const minutes = args[0] ? Number(args[0]) : 30;
-  const messages = sweepStaleLeases({ minutes, dbPath: DB_PATH, crmDir: CRM_DIR, projectRoot: PROJECT_ROOT });
+  const sweepConfig = loadConfig(CRM_DIR);
+  const messages = sweepStaleLeases({ minutes, abandonMinutes: sweepConfig.abandonMinutes, dbPath: DB_PATH, crmDir: CRM_DIR, projectRoot: PROJECT_ROOT });
   for (const message of messages) {
     process.stdout.write(`${message}\n`);
   }

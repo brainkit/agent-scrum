@@ -58,7 +58,13 @@ export function claim(role, dbPath, options = {}) {
   // released before every claim, so an in-progress status only ever shows
   // work that is actually alive within the lease window.
   const leaseMinutes = options.leaseMinutes ?? 30;
-  const sweepMessages = sweepStaleLeases({ minutes: leaseMinutes, dbPath, crmDir: options.crmDir, projectRoot: options.projectRoot });
+  const sweepMessages = sweepStaleLeases({
+    minutes: leaseMinutes,
+    abandonMinutes: options.abandonMinutes,
+    dbPath,
+    crmDir: options.crmDir,
+    projectRoot: options.projectRoot,
+  });
   for (const message of sweepMessages) {
     process.stderr.write(`${message}\n`);
   }
@@ -110,8 +116,64 @@ function staleTaskIds(dbPath, statusClauseSql, minutes) {
   return rows.filter((row) => claimIsDead(row, Number(minutes))).map((row) => row.id);
 }
 
-export function sweepStaleLeases({ minutes, dbPath, crmDir, projectRoot }) {
+// Where work goes when the session that claimed it walked away. A crash
+// returns work to the queue it came from (below); being forgotten is a
+// different thing — nobody decided to stop, so the plan itself is stale
+// and the task goes back to the BACKLOG for a human to re-plan.
+const ABANDON_TARGETS = {
+  PLANNING: 'BACKLOG',
+  CODING: 'BACKLOG',
+  REVIEWING: 'READY_FOR_REVIEW',
+  TESTING: 'READY_FOR_TEST',
+  DOCUMENTING: 'READY_FOR_DOCS',
+};
+
+// Abandonment is about ACTIVITY, not liveness: a chat that claimed a task
+// two days ago and moved on is very much alive. Activity is the claim
+// itself, anything written to the task's trace, and — through the edit
+// guard's heartbeat — every file its holder touches, so a slow worker
+// keeps its claim while a forgotten task loses it.
+function abandonedTasks(dbPath, minutes) {
+  const rows = runQuery(
+    dbPath,
+    `SELECT t.id, t.status, t.holder_pid, t.holder_start,
+            CAST((julianday('now') - julianday(MAX(t.locked_at, COALESCE(
+              (SELECT MAX(e.created_at) FROM events e WHERE e.task_id = t.id), t.locked_at)))) * 1440 AS INTEGER) AS idle_minutes
+     FROM tasks t
+     WHERE t.assigned_agent IS NOT NULL AND t.locked_at IS NOT NULL
+       AND t.status IN ('PLANNING','CODING','REVIEWING','TESTING','DOCUMENTING')`,
+    [],
+  );
+  return rows.filter(
+    (row) => Number(row.idle_minutes) >= Number(minutes) && isHolderAlive(row.holder_pid, row.holder_start) === true,
+  );
+}
+
+export function sweepAbandonedClaims({ minutes, dbPath }) {
   const messages = [];
+  if (!minutes || Number(minutes) <= 0) {
+    return messages;
+  }
+  for (const row of abandonedTasks(dbPath, minutes)) {
+    const target = ABANDON_TARGETS[row.status] || 'BACKLOG';
+    const hours = Math.round(Number(row.idle_minutes) / 6) / 10;
+    // No snapshot rollback here: unlike a crash mid-write nothing was
+    // interrupted, so whatever is on disk is deliberate and throwing it
+    // away would be the worse mistake.
+    runQuery(
+      dbPath,
+      'UPDATE tasks SET status=?, assigned_agent=NULL, locked_at=NULL, holder_pid=NULL, holder_start=NULL WHERE id=?',
+      [target, row.id],
+    );
+    insertEvent(dbPath, row.id, 'sweep', 'sweep',
+      `abandoned: ${row.status} untouched for ${hours}h by a live session -> ${target}`);
+    messages.push(`lease_sweep: task ${row.id} (${row.status}) untouched for ${hours}h -> ${target}`);
+  }
+  return messages;
+}
+
+export function sweepStaleLeases({ minutes, dbPath, crmDir, projectRoot, abandonMinutes }) {
+  const messages = sweepAbandonedClaims({ minutes: abandonMinutes, dbPath });
 
   for (const taskId of staleTaskIds(dbPath, "status='PLANNING'", minutes)) {
     runQuery(dbPath, "UPDATE tasks SET status='BACKLOG', assigned_agent=NULL, locked_at=NULL, holder_pid=NULL, holder_start=NULL WHERE id=?", [taskId]);

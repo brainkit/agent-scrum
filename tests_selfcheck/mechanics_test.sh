@@ -2282,6 +2282,93 @@ PYCFG
 }
 
 
+# --- Scenario 32: forgotten work is released even though its session lives ---
+scenario_32_abandoned_claims() {
+  local scenario_name="32: a claim untouched for longer than abandonMinutes is released even though the holder is alive; an active claim is not"
+  reset_database
+
+  local crm=(node "$SCRATCH_DIR/scrum_crm/crm.mjs")
+  local config="$SCRATCH_DIR/scrum_crm/config.json"
+
+  set_abandon_minutes() {
+    python3 - "$config" "$1" <<'PYCFG'
+import json,sys
+p=sys.argv[1]; c=json.load(open(p)); c['abandonMinutes']=int(sys.argv[2])
+open(p,'w').write(json.dumps(c,indent=2)+'\n')
+PYCFG
+  }
+
+  # The holder is THIS shell — alive throughout, so liveness alone would
+  # keep both claims forever. Only activity tells them apart.
+  local holder_start
+  holder_start="$(node -e '
+    const fs = require("fs");
+    const stat = fs.readFileSync(`/proc/${process.argv[1]}/stat`, "utf8");
+    console.log(stat.slice(stat.lastIndexOf(")") + 2).split(" ")[19]);
+  ' $$)"
+
+  "${crm[@]}" add-task "Forgotten" "Given a When b Then c" --status READY_FOR_DEV >/dev/null
+  "${crm[@]}" add-task "Worked on" "Given a When b Then c" --status READY_FOR_DEV >/dev/null
+  "${crm[@]}" advance 1 CODING --claim agent_one >/dev/null
+  "${crm[@]}" advance 2 CODING --claim agent_two >/dev/null
+  "${DB[@]}" "UPDATE tasks SET holder_pid=$$, holder_start='$holder_start'" >/dev/null
+  # Age the claim and its trace: the sweep measures time since the last
+  # activity, and the claim transition itself is activity.
+  "${DB[@]}" "UPDATE tasks SET locked_at=datetime('now','-50 hours') WHERE id=1" >/dev/null
+  "${DB[@]}" "UPDATE events SET created_at=datetime('now','-50 hours') WHERE task_id=1" >/dev/null
+
+  set_abandon_minutes 480
+  "${crm[@]}" sweep >/dev/null 2>&1
+
+  local forgotten active
+  forgotten="$("${crm[@]}" db --scalar "SELECT status || '/' || COALESCE(assigned_agent,'-') FROM tasks WHERE id=1")"
+  active="$("${crm[@]}" db --scalar "SELECT status || '/' || COALESCE(assigned_agent,'-') FROM tasks WHERE id=2")"
+  if [[ "$forgotten" != "BACKLOG/-" ]]; then
+    report_fail "$scenario_name" "a claim untouched for 50h must return to BACKLOG unclaimed, got '$forgotten'"
+    return
+  fi
+  if [[ "$active" != "CODING/agent_two" ]]; then
+    report_fail "$scenario_name" "a fresh claim by a live holder must survive, got '$active'"
+    return
+  fi
+
+  # The release explains itself in the trace, with the idle time.
+  local trace
+  trace="$("${crm[@]}" db --scalar "SELECT detail FROM events WHERE task_id=1 AND kind='sweep' ORDER BY id DESC LIMIT 1")"
+  if [[ "$trace" != *"abandoned: CODING untouched for"* ]]; then
+    report_fail "$scenario_name" "the sweep must record why it released the task, got '$trace'"
+    return
+  fi
+
+  # Stages past coding go back to their own queue: there the requirement
+  # is settled and only the person is missing.
+  "${crm[@]}" advance 2 READY_FOR_TEST --agent agent_two --release >/dev/null
+  "${crm[@]}" advance 2 TESTING --claim qa_one >/dev/null
+  "${DB[@]}" "UPDATE tasks SET holder_pid=$$, holder_start='$holder_start', locked_at=datetime('now','-50 hours') WHERE id=2" >/dev/null
+  "${DB[@]}" "UPDATE events SET created_at=datetime('now','-50 hours') WHERE task_id=2" >/dev/null
+  "${crm[@]}" sweep >/dev/null 2>&1
+  local after_testing
+  after_testing="$("${crm[@]}" db --scalar "SELECT status FROM tasks WHERE id=2")"
+  if [[ "$after_testing" != "READY_FOR_TEST" ]]; then
+    report_fail "$scenario_name" "an abandoned TESTING claim belongs in its own queue, got '$after_testing'"
+    return
+  fi
+
+  # Zero switches the whole thing off.
+  set_abandon_minutes 0
+  "${crm[@]}" advance 2 TESTING --claim qa_two >/dev/null
+  "${DB[@]}" "UPDATE tasks SET holder_pid=$$, holder_start='$holder_start', locked_at=datetime('now','-50 hours') WHERE id=2" >/dev/null
+  "${DB[@]}" "UPDATE events SET created_at=datetime('now','-50 hours') WHERE task_id=2" >/dev/null
+  "${crm[@]}" sweep >/dev/null 2>&1
+  if [[ "$("${crm[@]}" db --scalar "SELECT status FROM tasks WHERE id=2")" != "TESTING" ]]; then
+    report_fail "$scenario_name" "abandonMinutes=0 must disable the release entirely"
+    return
+  fi
+
+  set_abandon_minutes 480
+  report_pass "$scenario_name"
+}
+
 main() {
   trap cleanup_scratch EXIT
   prepare_scratch_copy
@@ -2317,6 +2404,7 @@ main() {
   scenario_29_guard_precision
   scenario_30_summary_gate
   scenario_31_require_task_for_edits
+  scenario_32_abandoned_claims
 
   echo "----"
   echo "Total: PASS=$PASS_COUNT FAIL=$FAIL_COUNT"

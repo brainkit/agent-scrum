@@ -111,7 +111,18 @@ async function main() {
   }
 
   const ancestors = new Set(ancestorPids());
-  if (claims.some((task) => ancestors.has(Number(task.holder_pid)))) {
+  const mine = claims.find((task) => ancestors.has(Number(task.holder_pid)));
+  if (mine) {
+    // Heartbeat: touching a file is work on the task, so the claim's
+    // clock restarts. This is what lets the sweep tell a slow worker
+    // from a session that claimed something and wandered off.
+    try {
+      const database = new DatabaseSync(dbPath);
+      database.prepare("UPDATE tasks SET locked_at = datetime('now') WHERE id = ?").run(mine.id);
+      database.close();
+    } catch {
+      // a missed heartbeat only costs a little accuracy later
+    }
     process.exit(0);
   }
 

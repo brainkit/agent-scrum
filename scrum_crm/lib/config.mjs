@@ -23,6 +23,9 @@ const DEFAULT_CONFIG = {
   docsEnabled: false,
   gitAutocommit: 'auto',
   leaseMinutes: 30,
+  // A live session that has not touched a task for this long has moved on
+  // — the claim is released even though the holder is alive. 0 disables.
+  abandonMinutes: 480,
   contextWindowTokens: 200000,
   contextFitThreshold: 0.6,
 };
